@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en-IN" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Zero-server, browser-native OCR platform for Indian regional languages. Process documents with full Devanagari, Bengali, Tamil support — entirely on-device.">
+  <meta name="theme-color" content="#0f1117">
+  <title>OCR Studio</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234f8ef7'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/></svg>">
+
+  <!-- Cache busting on update -->
+  <script>
+    if ('caches' in window) {
+      // Clear outdated caches on load
+      if (window.location.search.includes('clearCache') || !localStorage.getItem('indicocr_v15_migrated')) {
+        localStorage.setItem('indicocr_v15_migrated', '1');
+        caches.keys().then(function(keys) {
+          keys.forEach(function(k) {
+            if (!k.includes('indicocr-v2-15.0.0')) {
+              caches.delete(k);
+            }
+          });
+        });
+      }
+    }
+  </script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css?v=20.0">
+
+  <!-- ============================================================
+       CDN LIBRARIES (UMD/IIFE builds — load before app modules)
+       ============================================================ -->
+
+  <!-- Dexie.js v4 — IndexedDB wrapper -->
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.10/dist/dexie.min.js"></script>
+
+  <!-- pdf-lib v1.17.1 — Searchable PDF generation -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- docx v9.7.1 — DOCX generation (UMD build) -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js"></script>
+
+  <!-- FileSaver.js v2.0.5 — Blob download trigger -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <!-- Tesseract.js v5 — Client-side WASM OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <!-- ============================================================
+       PDF.js v5.5.207 — PDF rasterization (loaded as ESM module)
+       ============================================================ -->
+  <script type="module">
+    import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/+esm';
+    window.pdfjsLib = pdfjsLib; // Expose to non-module scripts
+
+    const WORKER_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+
+    // Convert worker script to same-origin Blob URL so WebKit/Safari Same-Origin Policy never blocks or hangs worker threads
+    try {
+      fetch(WORKER_URL)
+        .then(function (res) {
+          if (!res.ok) throw new Error('Worker fetch HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function (code) {
+          var blob = new Blob([code], { type: 'application/javascript' });
+          pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+          console.log('[PDF.js] Same-origin Blob Worker initialized successfully');
+        })
+        .catch(function (err) {
+          console.warn('[PDF.js] Blob worker fallback to direct URL:', err);
+        });
+    } catch (e) {
+      console.warn('[PDF.js] Worker setup warning:', e);
+    }
+  </script>
+
+  <!-- ============================================================
+       GLOBAL NAMESPACE & ICON SYSTEM
+       ============================================================ -->
+  <script>
+    window.OCRStudio = window.OCRStudio || {};
+  </script>
+  <script src="js/icons.js?v=3.7"></script>
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP NAVIGATION
+       ============================================================ -->
+  <nav id="top-nav">
+    <!-- Brand — click to go home -->
+    <button id="btn-home" class="nav-brand" title="Go to Home">
+      <svg class="ui-icon ui-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-brand-name">OCR Studio</span>
+    </button>
+
+    <div class="nav-center" id="nav-center">
+      <!-- Resume banner injected here by app.js if needed -->
+    </div>
+
+    <!-- Right-side nav actions -->
+    <div class="nav-actions">
+      <!-- Samples popup -->
+      <div class="nav-samples-wrapper" id="nav-samples-wrapper">
+        <button id="btn-nav-samples" class="nav-pill-btn" title="Try Sample Documents">
+          <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+          Try Samples
+        </button>
+        <!-- Samples flyout popup -->
+        <div id="nav-samples-popup" class="nav-samples-popup hidden"></div>
+      </div>
+
+      <!-- Tests -->
+      <button id="btn-tests" class="nav-pill-btn" title="Run Automated Test Suite">
+        <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+        Tests
+      </button>
+
+      <!-- Guide — book icon only, no question mark -->
+      <button id="btn-guide" class="nav-pill-btn" title="User Guide">
+        <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Guide
+      </button>
+
+      <!-- AI Engine Status Pill -->
+      <button id="btn-nav-ai-status" class="nav-pill-btn" title="Gemini AI Fast Pipeline Status">
+        <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span id="nav-ai-label">AI: Setup</span>
+      </button>
+
+      <!-- Settings — gear icon only, no text -->
+      <button id="btn-settings" class="nav-pill-btn nav-pill-icon-only" title="Settings">
+        <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       MAIN CONTENT
+       ============================================================ -->
+  <main id="main-content">
+
+    <!-- ── Upload Zone ────────────────────────────────────────────── -->
+    <section id="upload-zone" class="active">
+      <!-- Drop Area (shown by default) -->
+      <div id="drop-area">
+        <div class="drop-icon" style="color:var(--accent);">
+          <svg class="ui-icon ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+        </div>
+        <h2 class="drop-heading">Drop your document here</h2>
+        <p class="drop-subheading">Supports PDF, PNG, JPEG, TIFF, WebP · 100% on-device processing</p>
+        <button id="btn-select-file" class="btn-primary" style="margin-top: 16px;">
+          <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Browse Files
+        </button>
+        <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.webp" hidden>
+        <div class="drop-features">
+          <div class="drop-feature">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <span>Zero cloud upload</span>
+          </div>
+          <div class="drop-feature">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span>13 Indian scripts — Hindi, Tamil, Telugu, Bengali &amp; more</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-flight Panel (shown after file selection) -->
+      <div id="preflight-panel" class="hidden">
+        <h3 class="preflight-title">
+          <svg class="ui-icon ui-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Pre-flight Analysis
+        </h3>
+        <div id="preflight-results">
+          <div class="preflight-loading">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Analyzing document...
+          </div>
+        </div>
+        <div class="language-selector">
+          <label for="language-select">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            Primary Language:
+          </label>
+          <div class="lang-select-row">
+            <select id="language-select">
+              <option value="auto" selected>✨ Auto-Detect Language (AI Multi-Language)</option>
+              <option value="eng">English Only</option>
+              <option value="hin+eng">Hindi + English</option>
+              <option value="mar+eng">Marathi + English</option>
+              <option value="san">Sanskrit</option>
+              <option value="ben+eng">Bengali + English</option>
+              <option value="tam+eng">Tamil + English</option>
+              <option value="tel+eng">Telugu + English</option>
+              <option value="kan+eng">Kannada + English</option>
+              <option value="mal+eng">Malayalam + English</option>
+              <option value="guj+eng">Gujarati + English</option>
+              <option value="pan+eng">Punjabi (Gurmukhi) + English</option>
+              <option value="ori+eng">Odia + English</option>
+              <option value="urd+eng">Urdu + English</option>
+              <option value="asm+eng">Assamese + English</option>
+            </select>
+            <span id="lang-auto-badge" class="lang-auto-badge hidden">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+              AI Detected
+            </span>
+          </div>
+        </div>
+        <div class="preflight-actions">
+          <div id="auto-proceed-bar" class="auto-proceed-bar hidden">
+            <div class="auto-proceed-progress" id="auto-proceed-fill"></div>
+            <span id="auto-proceed-label">Starting in 3…</span>
+          </div>
+          <button id="btn-start-ocr" class="btn-primary">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+            Start OCR Processing
+          </button>
+          <button id="btn-cancel-preflight" class="btn-secondary">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Review Studio ──────────────────────────────────────────── -->
+    <section id="review-studio" class="hidden">
+
+      <!-- Left: Scan Canvas Pane -->
+      <div id="scan-pane">
+        <div id="scan-toolbar">
+          <button id="btn-hand-tool" class="toolbar-pill-btn" title="Hand Tool (hold Space)">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <span>Pan</span>
+          </button>
+          <button id="btn-fit-page" class="toolbar-pill-btn" title="Fit to Screen">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            <span>Fit</span>
+          </button>
+
+          <!-- Zoom Capsule (Zoom Out, % Level, Zoom In) -->
+          <div class="zoom-capsule">
+            <button id="btn-zoom-out" class="zoom-capsule-btn" title="Zoom Out">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span id="zoom-level" class="zoom-capsule-label">100%</span>
+            <button id="btn-zoom-in" class="zoom-capsule-btn" title="Zoom In">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+
+          <div class="scan-toolbar-spacer"></div>
+
+          <div class="toolbar-indicators-group">
+            <!-- Accuracy Badge (Color-coded) -->
+            <button id="page-accuracy-badge" class="toolbar-pill-badge conf-high" title="Page Accuracy — Click for Details & AI Guidance" type="button">
+              <span class="badge-dot dot-green"></span>
+              <span id="accuracy-text">— Accuracy</span>
+            </button>
+
+            <!-- AI Usage Badge -->
+            <button id="page-source-badge" class="toolbar-pill-badge normal" title="AI Usage Status" type="button">
+              <span class="badge-dot dot-gray"></span>
+              <span id="source-text">No AI (Raw OCR)</span>
+            </button>
+
+            <!-- Guidance Popover -->
+            <div id="accuracy-guidance-popup" class="accuracy-guidance-popup hidden">
+              <div class="guidance-popup-header">
+                <span class="guidance-popup-title">
+                  <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  Page Accuracy &amp; AI Status
+                </span>
+                <button id="btn-close-guidance" class="btn-icon" style="padding:2px 6px;font-size:12px;" aria-label="Close">✕</button>
+              </div>
+              <div class="guidance-popup-body" id="guidance-popup-body">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="scan-viewport">
+          <canvas id="scan-canvas"></canvas>
+          <svg id="bbox-overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+
+      <!-- Right: Text Editor Pane -->
+      <div id="text-pane">
+        <div id="text-toolbar">
+          <!-- Page navigation capsule -->
+          <div class="page-nav-capsule">
+            <button id="btn-prev-page" class="nav-capsule-btn" title="Previous Page">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span id="page-indicator" class="page-capsule-label">Page — of —</span>
+            <button id="btn-next-page" class="nav-capsule-btn" title="Next Page">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <!-- Centered AI actions -->
+          <div class="toolbar-center-actions">
+            <button id="btn-gemini-proofread" class="toolbar-pill-btn" title="AI Proofread with Gemini">
+              <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+              <span>AI Proofread</span>
+            </button>
+            <button id="btn-gemini-vision" class="toolbar-pill-btn" title="Gemini Vision Re-Scan">
+              <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+              <span>Vision</span>
+            </button>
+            <button id="btn-open-diffs" class="toolbar-pill-btn" title="Open Diff Drawer">
+              <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+              <span>Diffs</span>
+            </button>
+          </div>
+
+          <!-- Push Export to far right -->
+          <div class="toolbar-spacer"></div>
+
+          <!-- Export group — far right -->
+          <div class="export-dropdown" id="export-dropdown-wrapper">
+            <button class="toolbar-pill-btn export-menu-toggle" id="btn-export-menu" type="button">
+              <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Export</span>
+              <svg class="ui-icon ui-icon-xs export-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="export-dropdown-menu" id="export-dropdown-menu">
+              <button id="btn-export-pdf" class="export-menu-item">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Searchable PDF
+              </button>
+              <button id="btn-export-docx" class="export-menu-item">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Word DOCX
+              </button>
+              <button id="btn-export-txt" class="export-menu-item">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                Plain Text
+              </button>
+              <button id="btn-export-json" class="export-menu-item">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                JSON + Audit Log
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text editor content area -->
+        <div id="text-editor" contenteditable="false" spellcheck="false" dir="auto">
+          <div class="text-editor-placeholder">
+            <p>Text will appear here as pages are processed.</p>
+            <p class="text-muted">Click any block to highlight its scan region.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff Drawer (slides in from right) -->
+      <div id="diff-drawer" class="hidden">
+        <div id="diff-drawer-header">
+          <h3>
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+            Proposed Corrections
+          </h3>
+          <div class="diff-drawer-header-actions">
+            <button id="btn-accept-all-diffs" class="btn-success" style="font-size:12px;padding:4px 10px;">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Accept All
+            </button>
+            <button id="btn-reject-all-diffs" class="btn-danger" style="font-size:12px;padding:4px 10px;">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Reject All
+            </button>
+            <button id="btn-close-diffs" class="btn-icon" aria-label="Close diff drawer">
+              <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="diff-list">
+          <p class="text-muted" style="padding:20px;">No corrections proposed for this page.</p>
+        </div>
+      </div>
+
+    </section><!-- /#review-studio -->
+
+  </main>
+
+  <!-- ============================================================
+       SETTINGS MODAL
+       ============================================================ -->
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>
+          <svg class="ui-icon ui-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </h2>
+        <button class="btn-close-modal btn-icon" aria-label="Close">
+          <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Gemini Section -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">
+          <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+          Gemini AI (BYOK)
+        </h3>
+        <p class="settings-section-desc text-muted">
+          Your API key is stored exclusively in your browser's localStorage and never sent to any server.
+        </p>
+
+        <div class="form-group">
+          <label for="gemini-api-key">Google AI Studio API Key</label>
+          <input type="password" id="gemini-api-key" placeholder="AIza..." autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="gemini-model-select">Model</label>
+          <select id="gemini-model-select">
+            <option value="gemini-3.6-flash">gemini-3.6-flash (Recommended — Ultra-Fast Multimodal)</option>
+            <option value="gemini-3.6-pro">gemini-3.6-pro (High Intelligence & Reasoning)</option>
+            <option value="gemini-3.8-flash">gemini-3.8-flash (Next-Gen High Throughput)</option>
+            <option value="gemini-3.8-pro">gemini-3.8-pro (Next-Gen Flagship)</option>
+            <option value="custom">Custom Model ID...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <input type="text" id="gemini-custom-model" placeholder="Enter custom model ID" class="hidden">
+        </div>
+
+        <div class="settings-test-row">
+          <button id="btn-test-gemini" class="btn-secondary">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a6 6 0 0 1-12 0V8z"/></svg>
+            Test Connection
+          </button>
+          <span id="gemini-status" class="gemini-status"></span>
+        </div>
+      </div>
+
+      <!-- Privacy Notice -->
+      <div class="settings-privacy-notice">
+        <span class="privacy-icon">
+          <svg class="ui-icon ui-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </span>
+        <span class="text-muted" style="font-size:12px;">
+          In Standard Mode, zero bytes of your document leave your device.
+          When using Gemini, only pages you explicitly send are transmitted to Google's official API endpoint.
+        </span>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn-primary">Save Settings</button>
+        <button class="btn-secondary btn-close-modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       USER GUIDE MODAL (content injected by UserGuideModal.js)
+       ============================================================ -->
+  <div id="guide-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="User Guide">
+    <!-- UserGuideModal.js injects content here -->
+  </div>
+
+  <!-- ============================================================
+       APP MODULES (in dependency order)
+       ============================================================ -->
+
+  <!-- Core data layer -->
+  <script src="js/canonical-doc.js?v=20.0"></script>
+  <script src="js/db.js?v=20.0"></script>
+  <script src="js/samples.js?v=20.0"></script>
+
+  <!-- Pipeline agents (no deps on each other) -->
+  <script src="js/agents/image-filters.js?v=20.0"></script>
+  <script src="js/agents/layout-agent.js?v=20.0"></script>
+  <script src="js/agents/script-id-agent.js?v=20.0"></script>
+  <script src="js/agents/cross-validation-agent.js?v=20.0"></script>
+  <script src="js/agents/correction-agent.js?v=20.0"></script>
+  <script src="js/agents/qa-agent.js?v=20.0"></script>
+
+  <!-- Services -->
+  <script src="js/gemini-service.js?v=20.0"></script>
+
+  <!-- Exporters -->
+  <script src="js/exporters/export-searchable-pdf.js?v=20.0"></script>
+  <script src="js/exporters/export-docx.js?v=20.0"></script>
+  <script src="js/exporters/export-txt.js?v=20.0"></script>
+  <script src="js/exporters/export-json.js?v=20.0"></script>
+
+  <!-- Infrastructure (depends on agents + data layer) -->
+  <script src="js/preflight.js?v=20.0"></script>
+  <script src="js/page-streamer.js?v=20.0"></script>
+  <script src="js/coordinator.js?v=20.0"></script>
+
+  <!-- ============================================================
+       TEST SUITE MODAL
+       ============================================================ -->
+  <div id="test-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Test Suite">
+    <div class="modal-box" style="width: 860px; max-width: 95vw; max-height: 85vh;">
+      <div class="modal-header">
+        <h2>
+          <svg class="ui-icon ui-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+          Automated Test Suite
+        </h2>
+        <button id="btn-close-tests" class="btn-icon" aria-label="Close">
+          <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+        <button id="btn-run-tests-modal" class="btn-primary">
+          <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+          Run All 36 Tests
+        </button>
+        <span class="text-muted" style="font-size:12px;">Covers PRD §4, §5, §6, §8, §10 invariants (raw_text immutability, diff reversibility, zero transmission)</span>
+      </div>
+      <div id="test-results-container">
+        <p class="text-muted" style="padding: 24px; text-align: center;">Click <strong>"Run All 36 Tests"</strong> to verify on-device pipeline agents, diff reversibility, and export engines.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- UI Components -->
+  <script src="js/components/JobProgress.js?v=20.0"></script>
+  <script src="js/components/ReviewStudio.js?v=20.0"></script>
+  <script src="js/components/UserGuideModal.js?v=20.0"></script>
+
+  <!-- Automated Test Suite -->
+  <script src="tests/test-suite.js?v=20.0"></script>
+
+  <!-- Main application controller (must load last) -->
+  <script type="module" src="js/app.js?v=20.0"></script>
+
+  <!-- ============================================================
+       UI WIRING (Export Dropdown & Test Modal)
+       ============================================================ -->
+  <script>
+    (function () {
+      function initWiring() {
+        // Wire test suite modal
+        const btnTests = document.getElementById('btn-tests');
+        const testModal = document.getElementById('test-modal');
+        const btnCloseTests = document.getElementById('btn-close-tests');
+        const btnRunTests = document.getElementById('btn-run-tests-modal');
+
+        if (btnTests && testModal && !btnTests._wired) {
+          btnTests._wired = true;
+          btnTests.addEventListener('click', () => testModal.classList.remove('hidden'));
+        }
+        if (btnCloseTests && testModal) {
+          btnCloseTests.addEventListener('click', () => testModal.classList.add('hidden'));
+        }
+        if (testModal) {
+          testModal.addEventListener('click', (e) => {
+            if (e.target === testModal) testModal.classList.add('hidden');
+          });
+        }
+        if (btnRunTests && window.OCRStudio && window.OCRStudio.TestSuite && !btnRunTests._wired) {
+          btnRunTests._wired = true;
+          btnRunTests.addEventListener('click', async () => {
+            btnRunTests.disabled = true;
+            btnRunTests.textContent = 'Running Tests...';
+            try {
+              await window.OCRStudio.TestSuite.run();
+            } finally {
+              btnRunTests.disabled = false;
+              btnRunTests.innerHTML = '<svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Re-run All 36 Tests';
+            }
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWiring);
+      } else {
+        initWiring();
+      }
+    })();
+  </script>
+
+</body>
+</html>
