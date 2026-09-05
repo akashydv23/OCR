@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Studio — Pitch Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --card-bg: #141824;
+      --card-border: #232a3d;
+      --accent: #4f8ef7;
+      --accent-glow: rgba(79, 142, 247, 0.25);
+      --accent-teal: #00d2b4;
+      --accent-purple: #9d5bf0;
+      --text-primary: #f1f3f9;
+      --text-secondary: #9aa4bc;
+      --text-muted: #606b85;
+      --danger: #ff5c77;
+      --success: #2ed573;
+      --warning: #ffa502;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Presentation Shell */
+    .deck-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 150;
+      background: rgba(11, 13, 19, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(35, 42, 61, 0.5);
+    }
+
+    .deck-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(79, 142, 247, 0.12);
+      border: 1px solid rgba(79, 142, 247, 0.35);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+    .deck-back-btn:hover {
+      background: rgba(79, 142, 247, 0.22);
+      color: #fff;
+    }
+    .deck-back-btn:active {
+      transform: scale(0.96);
+    }
+
+    .deck-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 52px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      padding: 40px 80px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.96) translateY(20px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+    }
+
+    /* Navigation & Controls */
+    .controls {
+      position: fixed;
+      bottom: 24px;
+      right: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+      background: rgba(20, 24, 36, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      padding: 8px 16px;
+      border-radius: 40px;
+    }
+
+    .btn-nav {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* Badges & Typography */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(79, 142, 247, 0.12);
+      border: 1px solid rgba(79, 142, 247, 0.3);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      width: fit-content;
+    }
+
+    .badge-teal {
+      background: rgba(0, 210, 180, 0.12);
+      border-color: rgba(0, 210, 180, 0.3);
+      color: var(--accent-teal);
+    }
+
+    .badge-purple {
+      background: rgba(157, 91, 240, 0.12);
+      border-color: rgba(157, 91, 240, 0.3);
+      color: var(--accent-purple);
+    }
+
+    .badge-warning {
+      background: rgba(255, 165, 2, 0.12);
+      border-color: rgba(255, 165, 2, 0.3);
+      color: var(--warning);
+    }
+
+    h1 {
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 30%, #9aa4bc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    p.subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 900px;
+      margin-bottom: 36px;
+    }
+
+    /* Cards Grid Layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .card-teal::before { background: linear-gradient(90deg, var(--accent-teal), transparent); }
+    .card-purple::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+    .card-danger::before { background: linear-gradient(90deg, var(--danger), transparent); }
+
+    .card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .highlight-pill {
+      font-family: 'JetBrains Mono', monospace;
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    /* Pipeline Diagram */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .pipe-step {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 20px 16px;
+      border-radius: 12px;
+      text-align: center;
+      position: relative;
+    }
+
+    .pipe-step .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .pipe-step .step-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .pipe-step .step-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .pipe-arrow {
+      color: var(--text-muted);
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    /* Big Demo Slide */
+    .demo-hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .demo-box {
+      background: radial-gradient(circle at center, rgba(79, 142, 247, 0.15), transparent 70%), var(--card-bg);
+      border: 2px dashed var(--accent);
+      border-radius: 24px;
+      padding: 60px 80px;
+      max-width: 800px;
+      box-shadow: 0 0 50px rgba(79, 142, 247, 0.2);
+      margin-top: 20px;
+    }
+
+    .demo-box h3 {
+      font-size: 32px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .demo-box p {
+      font-size: 18px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Quick cues on top-right for speaker */
+    .speaker-cue {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(20, 24, 36, 0.6);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      max-width: 60vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Mobile Responsive Overrides ────────────────────────── */
+    @media (max-width: 768px) {
+      body {
+        overflow-x: hidden;
+        overflow-y: hidden;
+        height: 100dvh;
+        width: 100vw;
+      }
+      .deck-top-bar {
+        height: 46px;
+        padding: 0 12px;
+      }
+      .deck-back-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+        gap: 4px;
+      }
+      .speaker-cue {
+        font-size: 11px;
+        padding: 4px 8px;
+        max-width: 65vw;
+      }
+      .deck-container {
+        padding-top: 46px;
+        height: calc(100dvh - 46px);
+        overflow: hidden;
+      }
+      .slide {
+        padding: 16px 16px 85px 16px;
+        justify-content: flex-start;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        height: 100%;
+        width: 100%;
+        max-width: 100vw;
+      }
+      .slide.active {
+        transform: none;
+      }
+      .badge {
+        font-size: 11px;
+        padding: 4px 10px;
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: clamp(1.8rem, 7vw, 2.4rem);
+        letter-spacing: -0.5px;
+        margin-bottom: 10px;
+      }
+      h2 {
+        font-size: clamp(1.35rem, 5.5vw, 1.85rem);
+        letter-spacing: -0.5px;
+        margin-bottom: 10px;
+      }
+      p.subtitle {
+        font-size: 0.92rem;
+        line-height: 1.5;
+        margin-bottom: 16px;
+      }
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .card {
+        padding: 16px 14px;
+        border-radius: 12px;
+      }
+      .card h3 {
+        font-size: 16px;
+        margin-bottom: 6px;
+      }
+      .card p {
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .pipeline {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        margin-top: 6px;
+      }
+      .pipe-step {
+        width: 100%;
+        padding: 12px 14px;
+        text-align: left;
+      }
+      .pipe-step .step-num {
+        margin-bottom: 4px;
+        font-size: 10px;
+      }
+      .pipe-step .step-title {
+        font-size: 13px;
+      }
+      .pipe-step .step-desc {
+        font-size: 11.5px;
+      }
+      .pipe-arrow {
+        transform: rotate(90deg);
+        text-align: center;
+        margin: -2px 0;
+        font-size: 14px;
+      }
+      .demo-box {
+        padding: 24px 16px;
+        border-radius: 16px;
+        width: 100%;
+      }
+      .demo-box h3 {
+        font-size: 20px;
+      }
+      .demo-box p {
+        font-size: 14px;
+      }
+      .controls {
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+        padding: 5px 10px;
+        gap: 6px;
+        border-radius: 30px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+      }
+      .btn-nav {
+        padding: 6px 10px;
+        font-size: 15px;
+        min-width: 36px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .slide-counter {
+        font-size: 12px;
+        min-width: 48px;
+      }
+      .highlight-pill {
+        font-size: 12px;
+        word-break: break-all;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="deck-top-bar">
+    <a href="index.html" class="deck-back-btn" title="Back to OCR Studio App">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span>App</span>
+    </a>
+    <div class="speaker-cue" id="timerCue">0:00 - 0:45 | Introduction</div>
+  </header>
+
+  <div class="deck-container">
+
+    <!-- SLIDE 1: TITLE & COVER -->
+    <div class="slide active" data-time="0:00 - 0:45 | Hook & Problem">
+      <div class="badge badge-purple">🤖 AI Buildathon — Building AI with AI</div>
+      <h1>OCR Studio</h1>
+      <p class="subtitle">Zero-Server, Browser-Native OCR Platform for Indian Regional Languages with Orthographic Reconstruction & Searchable PDF Export</p>
+      
+      <div class="grid-3" style="margin-top: 10px;">
+        <div class="card card-teal">
+          <h3>🔒 100% Client Privacy</h3>
+          <p>Zero data transmission. All preprocessing, WASM execution, and layout reconstruction run inside the browser.</p>
+        </div>
+        <div class="card">
+          <h3>⚡ Dual-Engine Power</h3>
+          <p>WASM Tesseract v5 for full offline autonomy + Gemini multimodal AI for high-speed complex transcribing.</p>
+        </div>
+        <div class="card card-purple">
+          <h3>📑 Searchable PDF</h3>
+          <p>Invisible text layer (<span class="highlight-pill">opacity: 0</span>) aligned over high-res scans for instant <span class="highlight-pill">Cmd + F</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: THE PROBLEM -->
+    <div class="slide" data-time="0:00 - 0:45 | Core Dilemma">
+      <div class="badge badge-warning">⚠️ The Core Dilemma</div>
+      <h2>Why Indian Language OCR is Broken</h2>
+      <p class="subtitle">Digitizing vernacular legal, historical, and governance records forced an unacceptable trade-off between security and accuracy.</p>
+      
+      <div class="grid-2">
+        <div class="card card-danger">
+          <h3>🚨 Crisis 1: The Privacy Vulnerability</h3>
+          <p style="margin-bottom: 12px;">Standard OCR requires sending files to third-party cloud servers.</p>
+          <ul style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; margin-left: 20px;">
+            <li>Courts & lawyers cannot risk uploading confidential client records.</li>
+            <li>Citizens risk leaking Aadhaar, PAN, and banking documents.</li>
+            <li>Zero offline functionality in remote districts or low-bandwidth areas.</li>
+          </ul>
+        </div>
+        <div class="card card-danger">
+          <h3>🧩 Crisis 2: Script & Matra Degradation</h3>
+          <p style="margin-bottom: 12px;">Indic scripts use non-linear glyphs, matras, and conjuncts.</p>
+          <ul style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; margin-left: 20px;">
+            <li>Standard engines detach vowel signs (जैसे 'ि' या 'ु') from root consonants.</li>
+            <li>Complex conjuncts (<span class="highlight-pill">प्र, ष्ट्र, ज्ञ</span>) become unreadable symbols.</li>
+            <li>Cloud LLMs frequently hallucinate or translate instead of verbatim transcription.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: TARGET USERS & LANDSCAPE -->
+    <div class="slide" data-time="0:45 - 1:30 | Users & Landscape">
+      <div class="badge badge-teal">👥 Users & Market Landscape</div>
+      <h2>Built For Data-Sovereign Workflows</h2>
+      <p class="subtitle">Existing solutions either compromise user privacy, impose prohibitive API costs, or fail on non-Latin typography.</p>
+      
+      <div class="grid-3">
+        <div class="card">
+          <h3>🏛️ Legal & Governance</h3>
+          <p>Lawyers, district courts, and revenue officers digitizing title deeds, petitions, and affidavits in regional languages with zero compliance breaches.</p>
+        </div>
+        <div class="card card-teal">
+          <h3>📚 Archives & Research</h3>
+          <p>Historians, state archives, and journalists converting rare vernacular newspapers and manuscripts into indexed, searchable text.</p>
+        </div>
+        <div class="card card-purple">
+          <h3>🛡️ Privacy-First Citizens</h3>
+          <p>Individuals digitizing financial tax statements, identity cards, and health records without feeding proprietary data to ad networks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: THE 7-STAGE PIPELINE -->
+    <div class="slide" data-time="1:30 - 2:30 | Architecture">
+      <div class="badge badge-teal">🤖 Multi-Agent AI Architecture (Built With AI)</div>
+      <h2>7-Stage Client-Side AI Pipeline</h2>
+      <p class="subtitle">Every stage executes locally inside Web Workers, orchestrating computer vision and orthographic reconstruction.</p>
+      
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="step-num">STAGE 01</div>
+          <div class="step-title">Image Filters</div>
+          <div class="step-desc">Sauvola Binarization + Radon Deskew</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="step-num">STAGE 02</div>
+          <div class="step-title">Dual OCR Engine</div>
+          <div class="step-desc">Tesseract WASM + Gemini Vision</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="step-num">STAGE 03</div>
+          <div class="step-title">Layout Agent</div>
+          <div class="step-desc">Multi-column & Reading Order</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="step-num">STAGE 04</div>
+          <div class="step-title">Cross-Validator</div>
+          <div class="step-desc">Matra Healing & Virama Validation</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="step-num">STAGE 05</div>
+          <div class="step-title">Export Engine</div>
+          <div class="step-desc">Searchable PDF, DOCX, JSON</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: LIVE DEMO TRANSITION -->
+    <div class="slide" data-time="2:30 - 3:45 | Live Demo Walkthrough">
+      <div class="demo-hero">
+        <div class="badge badge-purple">🔴 LIVE WORKING DEMO</div>
+        <div class="demo-box">
+          <h3>Switching to OCR Studio UI</h3>
+          <p>Now demonstrating live document upload, adaptive binarization, verbatim extraction, and invisible text layer embedding.</p>
+          <div style="margin-top: 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent);">
+            [ Switch recording to Studio Tab: index.html ]
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: WHAT BROKE & HOW WE GOT OUT -->
+    <div class="slide" data-time="3:45 - 4:30 | Technical Hurdles">
+      <div class="badge badge-warning">🛠️ Engineering War Stories</div>
+      <h2>What Broke, and How We Got Out</h2>
+      <p class="subtitle">Pushing browser standards to their limits brought severe runtime bottlenecks. Here is how we solved them:</p>
+      
+      <div class="grid-3">
+        <div class="card card-danger">
+          <h3>💥 Browser OOM Crashes</h3>
+          <p><strong>The Break:</strong> 20+ page 300 DPI PDFs pushed JS heap over 1.5GB, crashing browser tabs.</p>
+          <p style="margin-top: 10px; color: var(--success);"><strong>The Fix:</strong> Engineered a virtual streaming page pipeline, downscaling idle canvases and paging image blobs to IndexedDB (<span class="highlight-pill">Dexie.js</span>). RAM stayed &lt;60MB.</p>
+        </div>
+        <div class="card card-purple">
+          <h3>✂️ Broken Ligatures & Matras</h3>
+          <p><strong>The Break:</strong> OCR severed dependent vowel matras (like 'ि') from parent consonants.</p>
+          <p style="margin-top: 10px; color: var(--success);"><strong>The Fix:</strong> Built <span class="highlight-pill">CrossValidationAgent</span> with Unicode regex heuristics to reconstruct orphaned grapheme clusters post-OCR.</p>
+        </div>
+        <div class="card card-teal">
+          <h3>🎯 PDF Searchable Drift</h3>
+          <p><strong>The Break:</strong> Invisible text highlights drifted away from original scan words on copy-paste.</p>
+          <p style="margin-top: 10px; color: var(--success);"><strong>The Fix:</strong> Mapped raw bounding boxes to PDF points via affine transform matrices with <span class="highlight-pill">pdf-lib</span> text render mode 3.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: CONCLUSION & SUMMARY -->
+    <div class="slide" data-time="4:30 - 5:00 | Impact & Wrap Up">
+      <div class="badge badge-teal">🌟 Vision & Impact</div>
+      <h2>Democratizing Regional Digitization</h2>
+      <p class="subtitle">A browser-native blueprint for private, accessible, and high-precision language tools.</p>
+      
+      <div class="grid-3">
+        <div class="card">
+          <h3>⚡ 100% Free & Open Source</h3>
+          <p>Zero server costs. Deployable on static GitHub Pages with no backend infrastructure overhead.</p>
+        </div>
+        <div class="card card-teal">
+          <h3>📶 Progressive Web App</h3>
+          <p>Service Worker cache-first architecture enables full offline functionality in low-connectivity regions.</p>
+        </div>
+        <div class="card card-purple">
+          <h3>🇮🇳 13+ Indic Languages</h3>
+          <p>Supports Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Odia, Punjabi, and more.</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 36px; text-align: center;">
+        <span class="highlight-pill" style="font-size: 15px; padding: 8px 18px;">GitHub Repository: github.com/akashydv23/OCR</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn-nav" id="prevBtn" title="Previous Slide (Left Arrow)">◀</button>
+    <div class="slide-counter" id="counter">1 / 7</div>
+    <button class="btn-nav" id="nextBtn" title="Next Slide (Right Arrow or Space)">▶</button>
+    <button class="btn-nav" id="fsBtn" title="Toggle Fullscreen (F)">⛶</button>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('counter');
+    const timerCue = document.getElementById('timerCue');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const fsBtn = document.getElementById('fsBtn');
+    let current = 0;
+
+    function updateSlide(index, pushHistory = true) {
+      if (index < 0 || index >= slides.length) return;
+      slides[current].classList.remove('active');
+      current = index;
+      slides[current].classList.add('active');
+      // Scroll current slide to top on mobile
+      slides[current].scrollTop = 0;
+      counter.textContent = `${current + 1} / ${slides.length}`;
+      timerCue.textContent = slides[current].getAttribute('data-time') || '';
+
+      if (pushHistory) {
+        history.pushState({ slide: current }, '', `#slide-${current + 1}`);
+      }
+    }
+
+    prevBtn.addEventListener('click', () => updateSlide(current - 1));
+    nextBtn.addEventListener('click', () => updateSlide(current + 1));
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        updateSlide(current + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        updateSlide(current - 1);
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullScreen();
+      } else if (e.key === 'Escape') {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Touch Swipe Gestures for Mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (!e.changedTouches || !e.changedTouches[0]) return;
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Check if predominantly horizontal swipe with >= 45px threshold
+      if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+        if (deltaX < 0) {
+          // Swiped left -> Next slide
+          updateSlide(current + 1);
+        } else {
+          // Swiped right -> Previous slide
+          updateSlide(current - 1);
+        }
+      }
+    }, { passive: true });
+
+    // History popstate support (Device Back Button / Swipe Back)
+    window.addEventListener('popstate', (e) => {
+      if (e.state && typeof e.state.slide === 'number') {
+        updateSlide(e.state.slide, false);
+      } else {
+        const hashMatch = window.location.hash.match(/#slide-(\d+)/);
+        if (hashMatch) {
+          const s = parseInt(hashMatch[1], 10) - 1;
+          if (s >= 0 && s < slides.length) updateSlide(s, false);
+        } else {
+          updateSlide(0, false);
+        }
+      }
+    });
+
+    // Check initial hash
+    const initialMatch = window.location.hash.match(/#slide-(\d+)/);
+    if (initialMatch) {
+      const initIdx = parseInt(initialMatch[1], 10) - 1;
+      if (initIdx >= 0 && initIdx < slides.length) {
+        updateSlide(initIdx, false);
+      }
+    } else {
+      history.replaceState({ slide: 0 }, '', '#slide-1');
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+    fsBtn.addEventListener('click', toggleFullScreen);
+  </script>
+</body>
+</html>

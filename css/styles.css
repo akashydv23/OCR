@@ -131,6 +131,41 @@ kbd {
   z-index:       200;
 }
 
+/* Back Navigation Button */
+.nav-back-btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           6px;
+  background:    var(--bg-tertiary);
+  border:        1px solid var(--border-light);
+  color:         var(--text-primary);
+  padding:       6px 12px;
+  border-radius: 8px;
+  font-size:     13px;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    all 0.15s ease;
+  flex-shrink:   0;
+  user-select:   none;
+  touch-action:  manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-back-btn:hover {
+  background:   var(--bg-hover);
+  border-color: var(--accent);
+  color:        var(--accent-hover);
+}
+
+.nav-back-btn:active {
+  transform:    scale(0.96);
+  background:   rgba(79, 142, 247, 0.2);
+}
+
+.nav-back-btn.hidden {
+  display: none !important;
+}
+
 /* Brand — now a button */
 .nav-brand {
   display:      flex;
@@ -2035,6 +2070,23 @@ select option { background: var(--bg-secondary); color: var(--text-primary); }
     height: 48px;
     padding: 0 10px;
     gap: 6px;
+  }
+  .nav-back-btn {
+    padding: 5px 9px;
+    font-size: 12px;
+    gap: 4px;
+    background: rgba(79, 142, 247, 0.12);
+    border-color: rgba(79, 142, 247, 0.35);
+    color: var(--accent-hover);
+    min-height: 32px;
+  }
+  .nav-back-btn.hidden {
+    display: none !important;
+  }
+  @media (max-width: 380px) {
+    .nav-back-label {
+      display: none !important;
+    }
   }
   .nav-brand {
     padding: 2px 4px;

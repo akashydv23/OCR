@@ -1017,8 +1017,8 @@ window.OCRStudio.ReviewStudio = (function () {
     _scrollToBlock: function (blockId) { _scrollToBlock(blockId); },
     _renderDiffDrawer: function (pageData) { _renderDiffDrawer(pageData || _currentPageData); },
 
-    openDiffDrawer:  function () { var d = el('diff-drawer'); if (d) d.classList.add('open'); },
-    closeDiffDrawer: function () { var d = el('diff-drawer'); if (d) d.classList.remove('open'); },
+    openDiffDrawer:  function () { var d = el('diff-drawer'); if (d) { d.classList.remove('hidden'); d.classList.add('open'); } },
+    closeDiffDrawer: function () { var d = el('diff-drawer'); if (d) { d.classList.remove('open'); d.classList.add('hidden'); } },
 
     acceptDiff: async function (blockId, diffId) {
       if (!_currentPageData) return;

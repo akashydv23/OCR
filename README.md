@@ -1,8 +1,8 @@
-# IndicOCR Studio v2
+# OCR Studio
 
 > **Zero-Server, Browser-Native OCR Platform for Indian Regional Languages & Multilingual Documents**
 
-IndicOCR Studio v2 is a modern, high-performance web application that performs Optical Character Recognition (OCR), document layout reconstruction, and orthographic validation directly inside the web browser.
+OCR Studio is a modern, high-performance web application that performs Optical Character Recognition (OCR), document layout reconstruction, and orthographic validation directly inside the web browser.
 
 ---
 
@@ -36,7 +36,7 @@ This project is built with vanilla web technologies (HTML5, CSS3, ES6 JavaScript
 
 1. **Push this repository to GitHub**:
    ```bash
-   git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO_NAME>.git
+   git remote add origin https://github.com/akashydv23/OCR.git
    git branch -M main
    git push -u origin main
    ```
@@ -52,7 +52,7 @@ This project is built with vanilla web technologies (HTML5, CSS3, ES6 JavaScript
 3. **Access Your Live Site**:
    - Within 1–2 minutes, your site will be live at:
      ```
-     https://<YOUR_USERNAME>.github.io/<YOUR_REPO_NAME>/
+     https://akashydv23.github.io/OCR/
      ```
 
 ---

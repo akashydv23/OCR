@@ -76,12 +76,15 @@ window.OCRStudio = window.OCRStudio || {};
   const btnZoomIn = $('btn-zoom-in');
   const btnZoomOut = $('btn-zoom-out');
   const btnHome = $('btn-home');
+  const btnNavBack = $('btn-nav-back');
   const btnNavSamples = $('btn-nav-samples');
   const navSamplesPopup = $('nav-samples-popup');
   const langAutoBadge = $('lang-auto-badge');
   const autoProceedBar = $('auto-proceed-bar');
   const autoProceedFill = $('auto-proceed-fill');
   const autoProceedLabel = $('auto-proceed-label');
+
+  let _currentView = 'landing'; // 'landing' | 'upload' | 'preflight' | 'review'
 
   // ─── Initialization ───────────────────────────────────────────────────────
 
@@ -111,8 +114,15 @@ window.OCRStudio = window.OCRStudio || {};
     // Wire landing page CTA buttons
     wireLandingCTAs();
 
-    // Show landing page by default
-    showLanding();
+    // Check URL hash or default to landing page
+    const initialHash = window.location.hash.replace('#', '');
+    if (initialHash === 'upload') {
+      showUploadZone(false);
+      history.replaceState({ view: 'upload' }, '', '#upload');
+    } else {
+      showLanding(false);
+      history.replaceState({ view: 'landing' }, '', window.location.pathname);
+    }
 
     // Check for resumable sessions (only relevant when going straight to app)
     await checkForResumableSessions();
@@ -345,7 +355,21 @@ window.OCRStudio = window.OCRStudio || {};
     if (autoProceedBar) autoProceedBar.classList.add('hidden');
   }
 
-  async function showPreflightPanel(file) {
+  async function showPreflightPanel(file, push = true) {
+    cancelAutoProceed();
+    _currentView = 'preflight';
+    if (push) {
+      history.pushState({ view: 'preflight' }, '', '#preflight');
+    }
+    updateNavBackButton();
+
+    // Ensure uploadZone is active and landing is hidden
+    uploadZone.classList.remove('hidden');
+    uploadZone.classList.add('active');
+    hideLandingPage();
+    reviewStudio.classList.remove('active');
+    reviewStudio.classList.add('hidden');
+
     preflightPanel.classList.remove('hidden');
     dropArea.classList.add('hidden');
     const samplesSection = document.querySelector('.samples-section');
@@ -592,25 +616,54 @@ window.OCRStudio = window.OCRStudio || {};
     }
   }
 
-  // ─── UI State Transitions ─────────────────────────────────────────────────
+  // ─── UI State Transitions & Mobile Back Navigation ───────────────────────
 
-  function showReviewStudio() {
+  function updateNavBackButton() {
+    if (!btnNavBack) return;
+    if (_currentView === 'landing') {
+      btnNavBack.classList.add('hidden');
+    } else {
+      btnNavBack.classList.remove('hidden');
+      if (_currentView === 'review') {
+        btnNavBack.setAttribute('title', 'Back to Upload Zone');
+      } else if (_currentView === 'preflight') {
+        btnNavBack.setAttribute('title', 'Cancel and Back to File Selection');
+      } else {
+        btnNavBack.setAttribute('title', 'Back to Landing Page');
+      }
+    }
+  }
+
+  function showReviewStudio(push = true) {
+    _currentView = 'review';
+    if (push) {
+      history.pushState({ view: 'review' }, '', '#review');
+    }
     uploadZone.classList.remove('active');
     uploadZone.classList.add('hidden');
     reviewStudio.classList.remove('hidden');
     reviewStudio.classList.add('active');
     hideLandingPage();
+    updateNavBackButton();
   }
 
-  function showUploadZone() {
+  function showUploadZone(push = true) {
+    cancelAutoProceed();
+    _currentView = 'upload';
+    if (push) {
+      history.pushState({ view: 'upload' }, '', '#upload');
+    }
     reviewStudio.classList.remove('active');
     reviewStudio.classList.add('hidden');
     uploadZone.classList.remove('hidden');
     uploadZone.classList.add('active');
     dropArea.classList.remove('hidden');
     preflightPanel.classList.add('hidden');
+    const samplesSection = document.querySelector('.samples-section');
+    if (samplesSection) samplesSection.classList.remove('hidden');
     state.currentFile = null;
     hideLandingPage();
+    updateNavBackButton();
   }
 
   // ── Landing Page ──────────────────────────────────────────────────────────
@@ -622,8 +675,13 @@ window.OCRStudio = window.OCRStudio || {};
     landingPage.classList.remove('active');
   }
 
-  function showLanding() {
+  function showLanding(push = true) {
     if (!landingPage) return;
+    cancelAutoProceed();
+    _currentView = 'landing';
+    if (push) {
+      history.pushState({ view: 'landing' }, '', window.location.pathname);
+    }
     // Hide other views
     uploadZone.classList.remove('active');
     uploadZone.classList.add('hidden');
@@ -634,6 +692,130 @@ window.OCRStudio = window.OCRStudio || {};
     landingPage.scrollTop = 0;
     // Wire scroll animations (idempotent)
     initLandingAnimations();
+    updateNavBackButton();
+  }
+
+  function handleBackNavigation() {
+    // 1. If any modal / popup / drawer is open, dismiss it first
+    const openModals = [settingsModal, $('test-modal'), $('guide-modal')].filter(m => m && !m.classList.contains('hidden'));
+    if (openModals.length > 0) {
+      openModals.forEach(m => closeModal(m, false));
+      if (window.history.state && window.history.state.overlay) {
+        window.history.back();
+      }
+      return;
+    }
+
+    const diffDrawer = document.getElementById('diff-drawer');
+    if (diffDrawer && diffDrawer.classList.contains('open')) {
+      window.OCRStudio.ReviewStudio?.closeDiffDrawer();
+      if (window.history.state && window.history.state.overlay === 'diffs') {
+        window.history.back();
+      }
+      return;
+    }
+
+    if (navSamplesPopup && !navSamplesPopup.classList.contains('hidden')) {
+      navSamplesPopup.classList.add('hidden');
+      return;
+    }
+
+    const guidancePopup = document.getElementById('accuracy-guidance-popup');
+    if (guidancePopup && !guidancePopup.classList.contains('hidden')) {
+      guidancePopup.classList.add('hidden');
+      return;
+    }
+
+    // 2. If in Review Studio
+    if (_currentView === 'review') {
+      if (state.isProcessing) {
+        const ok = confirm('OCR processing is currently active. Do you want to stop and return to upload?');
+        if (!ok) return;
+        state.streamer?.pause();
+        state.isProcessing = false;
+      }
+      if (window.history.length > 1 && window.history.state?.view === 'review') {
+        window.history.back();
+      } else {
+        showUploadZone(true);
+      }
+      return;
+    }
+
+    // 3. If in Preflight
+    if (_currentView === 'preflight') {
+      cancelAutoProceed();
+      if (window.history.length > 1 && window.history.state?.view === 'preflight') {
+        window.history.back();
+      } else {
+        showUploadZone(true);
+      }
+      return;
+    }
+
+    // 4. If in Upload Zone
+    if (_currentView === 'upload') {
+      if (window.history.length > 1 && window.history.state?.view === 'upload') {
+        window.history.back();
+      } else {
+        showLanding(true);
+      }
+      return;
+    }
+
+    // Fallback if on landing: nothing to go back to
+  }
+
+  function handlePopState(e) {
+    // 1. If any overlay is open, dismiss it
+    const openModals = [settingsModal, $('test-modal'), $('guide-modal')].filter(m => m && !m.classList.contains('hidden'));
+    const isDiffDrawerOpen = document.getElementById('diff-drawer')?.classList.contains('open');
+    const isSamplesPopupOpen = navSamplesPopup && !navSamplesPopup.classList.contains('hidden');
+    const isGuidancePopupOpen = document.getElementById('accuracy-guidance-popup') && !document.getElementById('accuracy-guidance-popup').classList.contains('hidden');
+
+    let dismissedOverlay = false;
+    if (isGuidancePopupOpen) {
+      document.getElementById('accuracy-guidance-popup')?.classList.add('hidden');
+      dismissedOverlay = true;
+    }
+    if (isSamplesPopupOpen) {
+      navSamplesPopup?.classList.add('hidden');
+      dismissedOverlay = true;
+    }
+    if (isDiffDrawerOpen) {
+      window.OCRStudio.ReviewStudio?.closeDiffDrawer();
+      dismissedOverlay = true;
+    }
+    if (openModals.length > 0) {
+      openModals.forEach(m => m.classList.add('hidden'));
+      dismissedOverlay = true;
+    }
+
+    if (dismissedOverlay) {
+      updateNavBackButton();
+      return;
+    }
+
+    // 2. View resolution
+    const target = e.state?.view || (window.location.hash ? window.location.hash.replace('#', '') : 'landing');
+
+    if (target === 'review') {
+      if (state.canonicalDoc || state.sessionId) {
+        showReviewStudio(false);
+      } else {
+        showUploadZone(false);
+      }
+    } else if (target === 'preflight') {
+      if (state.currentFile) {
+        showPreflightPanel(state.currentFile, false);
+      } else {
+        showUploadZone(false);
+      }
+    } else if (target === 'upload') {
+      showUploadZone(false);
+    } else {
+      showLanding(false);
+    }
   }
 
   function initLandingAnimations() {
@@ -650,7 +832,7 @@ window.OCRStudio = window.OCRStudio || {};
   function wireLandingCTAs() {
     // "Try OCR Studio Free" hero CTA
     document.getElementById('lp-btn-open-app')?.addEventListener('click', () => {
-      showUploadZone();
+      showUploadZone(true);
     });
     // "See how it works" scrolls down within landing
     document.getElementById('lp-btn-learn-more')?.addEventListener('click', () => {
@@ -659,7 +841,7 @@ window.OCRStudio = window.OCRStudio || {};
     // Privacy section CTA + bottom CTA
     landingPage?.querySelectorAll('.lp-btn-cta-privacy, .lp-btn-cta-bottom').forEach(btn => {
       btn.addEventListener('click', () => {
-        showUploadZone();
+        showUploadZone(true);
       });
     });
   }
@@ -742,11 +924,19 @@ window.OCRStudio = window.OCRStudio || {};
   // ─── Modal Helpers ────────────────────────────────────────────────────────
 
   function openModal(modal) {
-    modal?.classList.remove('hidden');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (modal.id) {
+      history.pushState({ view: _currentView, overlay: modal.id }, '', '#' + modal.id);
+    }
   }
 
-  function closeModal(modal) {
-    modal?.classList.add('hidden');
+  function closeModal(modal, popHistory = true) {
+    if (!modal) return;
+    modal.classList.add('hidden');
+    if (popHistory && window.history.state && window.history.state.overlay === modal.id) {
+      window.history.back();
+    }
   }
 
   // ─── Event Wiring ─────────────────────────────────────────────────────────
@@ -783,17 +973,27 @@ window.OCRStudio = window.OCRStudio || {};
     });
     btnCancelPreflight?.addEventListener('click', () => {
       cancelAutoProceed();
-      preflightPanel.classList.add('hidden');
-      dropArea.classList.remove('hidden');
-      const samplesSection = document.querySelector('.samples-section');
-      if (samplesSection) samplesSection.classList.remove('hidden');
-      state.currentFile = null;
+      if (window.history.length > 1 && window.history.state?.view === 'preflight') {
+        window.history.back();
+      } else {
+        showUploadZone(false);
+      }
     });
 
     // ── Brand / Home ────────────────────────────────────────────────────────
     btnHome?.addEventListener('click', () => {
       cancelAutoProceed();
-      showLanding();
+      showLanding(true);
+    });
+
+    // ── Back Navigation Button ──────────────────────────────────────────────
+    btnNavBack?.addEventListener('click', () => {
+      handleBackNavigation();
+    });
+
+    // ── History Popstate ────────────────────────────────────────────────────
+    window.addEventListener('popstate', (e) => {
+      handlePopState(e);
     });
 
     // ── Samples Nav Popup ───────────────────────────────────────────────────
@@ -863,7 +1063,11 @@ window.OCRStudio = window.OCRStudio || {};
       btnNavSamples.addEventListener('click', (e) => {
         e.stopPropagation();
         buildSamplesPopup();
+        const wasHidden = navSamplesPopup.classList.contains('hidden');
         navSamplesPopup.classList.toggle('hidden');
+        if (wasHidden) {
+          history.pushState({ view: _currentView, overlay: 'samples' }, '', '#samples');
+        }
       });
       document.addEventListener('click', (e) => {
         if (!e.target.closest('#nav-samples-wrapper')) {
@@ -993,6 +1197,7 @@ window.OCRStudio = window.OCRStudio || {};
     // ── Diff & AI Actions ──────────────────────────────────────────────────
     btnOpenDiffs?.addEventListener('click', () => {
       window.OCRStudio.ReviewStudio.openDiffDrawer();
+      history.pushState({ view: _currentView, overlay: 'diffs' }, '', '#diffs');
     });
 
     btnGeminiProofread?.addEventListener('click', async () => {
