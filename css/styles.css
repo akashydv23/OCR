@@ -48,6 +48,7 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -56,6 +57,8 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   overflow:    hidden;
   height:      100vh;
+  max-width:   100vw;
+  overflow-x:  hidden;
   line-height: 1.5;
 }
 
@@ -2015,5 +2018,146 @@ select option { background: var(--bg-secondary); color: var(--text-primary); }
 @keyframes skeletonShimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── Mobile Responsive Overrides ──────────────────────────── */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  #top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    width: 100%;
+    max-width: 100vw;
+    height: 48px;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .nav-brand {
+    padding: 2px 4px;
+    gap: 6px;
+  }
+  .nav-brand-name {
+    font-size: 15px;
+  }
+  .nav-actions {
+    gap: 4px;
+  }
+  .nav-btn-label {
+    display: none !important;
+  }
+  #btn-tests {
+    display: none !important;
+  }
+  #nav-ai-label {
+    display: none !important;
+  }
+  .nav-pill-btn {
+    padding: 6px 8px;
+    font-size: 12px;
+    gap: 0;
+  }
+  .nav-samples-popup {
+    width: 95vw;
+    right: -10px;
+  }
+  .nav-samples-popup .samples-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  #main-content {
+    height: auto;
+    min-height: calc(100dvh - 48px);
+    overflow: visible;
+    max-width: 100vw;
+  }
+  #upload-zone {
+    min-height: calc(100dvh - 48px);
+    height: auto;
+    padding: 20px 14px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  #drop-area {
+    width: 100%;
+    max-width: 100%;
+    min-height: 200px;
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+  .drop-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+  .drop-heading {
+    font-size: 1.15rem;
+  }
+  .drop-subheading {
+    font-size: 0.85rem;
+  }
+  .drop-features {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  #preflight-panel {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px;
+  }
+  .preflight-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .preflight-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+  #review-studio {
+    flex-direction: column;
+    height: calc(100dvh - 48px);
+    overflow: hidden;
+  }
+  #scan-pane {
+    flex: 0 0 42vh;
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+  }
+  #studio-divider {
+    display: none;
+  }
+  #text-pane {
+    flex: 1;
+    overflow-y: auto;
+  }
+  #text-editor {
+    padding: 16px;
+    font-size: 14px;
+  }
+  #scan-toolbar, #text-toolbar {
+    height: 40px;
+    padding: 0 6px;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .modal-box {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 85vh;
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  #job-progress {
+    width: calc(100vw - 32px);
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+  #diff-drawer {
+    width: 100%;
+  }
 }
 

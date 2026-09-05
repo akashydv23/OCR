@@ -31,7 +31,7 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=22.0">
+  <link rel="stylesheet" href="css/styles.css?v=23.0">
 
   <!-- ============================================================
        CDN LIBRARIES (UMD/IIFE builds — load before app modules)
@@ -113,7 +113,7 @@
       <div class="nav-samples-wrapper" id="nav-samples-wrapper">
         <button id="btn-nav-samples" class="nav-pill-btn" title="Try Sample Documents">
           <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
-          Try Samples
+          <span class="nav-btn-label">Try Samples</span>
         </button>
         <!-- Samples flyout popup -->
         <div id="nav-samples-popup" class="nav-samples-popup hidden"></div>
@@ -122,13 +122,13 @@
       <!-- Tests -->
       <button id="btn-tests" class="nav-pill-btn" title="Run Automated Test Suite">
         <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
-        Tests
+        <span class="nav-btn-label">Tests</span>
       </button>
 
       <!-- Guide — book icon only, no question mark -->
       <button id="btn-guide" class="nav-pill-btn" title="User Guide">
         <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        Guide
+        <span class="nav-btn-label">Guide</span>
       </button>
 
       <!-- AI Engine Status Pill -->
@@ -368,15 +368,184 @@
       color: var(--text-muted);
     }
 
-    /* Responsive */
+    /* Responsive Mobile Overrides */
     @media (max-width: 768px) {
-      .lp-engines { grid-template-columns: 1fr; }
-      .lp-privacy { grid-template-columns: 1fr; padding: 30px 20px; gap: 26px; }
-      .lp-footer { flex-direction: column; align-items: center; text-align: center; gap: 12px; }
-    }
-    @media (max-width: 480px) {
-      .lp-actions { flex-direction: column; width: 100%; }
-      .lp-btn-primary, .lp-btn-secondary { width: 100%; justify-content: center; }
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        position: relative;
+      }
+      #top-nav {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        width: 100%;
+        max-width: 100vw;
+        height: 48px;
+        padding: 0 10px;
+        gap: 6px;
+      }
+      .nav-brand {
+        padding: 2px 4px;
+        gap: 6px;
+      }
+      .nav-brand-name {
+        font-size: 15px;
+      }
+      .nav-actions {
+        gap: 4px;
+      }
+      .nav-btn-label {
+        display: none !important;
+      }
+      #btn-tests {
+        display: none !important;
+      }
+      #nav-ai-label {
+        display: none !important;
+      }
+      .nav-pill-btn {
+        padding: 6px 8px;
+        font-size: 12px;
+        gap: 0;
+      }
+      #main-content {
+        height: auto;
+        min-height: calc(100dvh - 48px);
+        overflow: visible;
+        max-width: 100vw;
+      }
+      #landing-page {
+        height: auto;
+        min-height: 100%;
+        overflow-y: visible;
+        overflow-x: hidden;
+        padding-bottom: 0;
+      }
+      .lp-hero {
+        min-height: auto;
+        padding: 36px 16px 28px;
+      }
+      .lp-hero-glow {
+        max-width: 100vw;
+        width: 100%;
+      }
+      .lp-badge {
+        font-size: 0.68rem;
+        padding: 4px 10px;
+        margin-bottom: 16px;
+      }
+      .lp-title {
+        font-size: clamp(1.75rem, 6.5vw, 2.3rem);
+        margin-bottom: 14px;
+      }
+      .lp-subtitle {
+        font-size: 0.92rem;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      .lp-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+      }
+      .lp-btn-primary, .lp-btn-secondary {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 18px;
+        font-size: 0.92rem;
+      }
+      .lp-note {
+        font-size: 0.72rem;
+        margin-top: 14px;
+      }
+      .lp-marquee-wrap {
+        margin: 28px auto 0;
+        max-width: 100%;
+      }
+      .lp-section {
+        padding: 40px 16px;
+      }
+      .lp-section-title {
+        font-size: 1.5rem;
+      }
+      .lp-section-sub {
+        font-size: 0.88rem;
+      }
+      .lp-steps {
+        grid-template-columns: 1fr;
+        margin-top: 24px;
+      }
+      .lp-step {
+        padding: 20px 16px;
+      }
+      .lp-features {
+        grid-template-columns: 1fr;
+        margin-top: 24px;
+      }
+      .lp-feat {
+        padding: 20px 16px;
+      }
+      .lp-engines {
+        grid-template-columns: 1fr;
+        margin-top: 24px;
+      }
+      .lp-engine {
+        padding: 20px 16px;
+      }
+      .lp-langs {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 6px;
+        margin-top: 20px;
+      }
+      .lp-lang {
+        padding: 10px 6px;
+      }
+      .lp-lang-native {
+        font-size: 1.3rem;
+      }
+      .lp-lang-name {
+        font-size: 0.68rem;
+      }
+      .lp-privacy {
+        grid-template-columns: 1fr;
+        padding: 24px 16px;
+        gap: 20px;
+      }
+      .lp-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .lp-stat {
+        padding: 14px 10px;
+      }
+      .lp-stat-val {
+        font-size: 1.6rem;
+      }
+      .lp-stat-lbl {
+        font-size: 0.7rem;
+      }
+      .lp-cta {
+        padding: 44px 16px;
+      }
+      .lp-cta h2 {
+        font-size: 1.55rem;
+      }
+      .lp-cta p {
+        font-size: 0.88rem;
+      }
+      .lp-footer {
+        padding: 24px 16px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+      }
+      .lp-footer-brand, .lp-footer-creator, .lp-footer-copy {
+        justify-content: center;
+        text-align: center;
+      }
     }
   </style>
 
@@ -400,7 +569,7 @@
             Try OCR Studio Free
           </button>
           <button class="lp-btn-secondary" id="lp-btn-learn-more">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
             See how it works
           </button>
         </div>
@@ -615,7 +784,7 @@
       <footer class="lp-footer">
         <div class="lp-footer-brand">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          IndicOCR Studio v2
+          OCR Studio
         </div>
         <div class="lp-footer-creator">
           Crafted with <span style="color:#e05151;">❤️</span> by <span class="lp-author-name">Akash Yadav</span>
@@ -653,7 +822,7 @@
 
       <!-- App Footer Credit -->
       <div class="app-footer-credit">
-        Crafted with <span style="color:#e05151;">❤️</span> by <span class="author-name">Akash Yadav</span> &nbsp;·&nbsp; IndicOCR Studio v2
+        Crafted with <span style="color:#e05151;">❤️</span> by <span class="author-name">Akash Yadav</span> &nbsp;·&nbsp; OCR Studio
       </div>
 
       <!-- Pre-flight Panel (shown after file selection) -->
@@ -960,31 +1129,31 @@
        ============================================================ -->
 
   <!-- Core data layer -->
-  <script src="js/canonical-doc.js?v=22.0"></script>
-  <script src="js/db.js?v=22.0"></script>
-  <script src="js/samples.js?v=22.0"></script>
+  <script src="js/canonical-doc.js?v=23.0"></script>
+  <script src="js/db.js?v=23.0"></script>
+  <script src="js/samples.js?v=23.0"></script>
 
   <!-- Pipeline agents (no deps on each other) -->
-  <script src="js/agents/image-filters.js?v=22.0"></script>
-  <script src="js/agents/layout-agent.js?v=22.0"></script>
-  <script src="js/agents/script-id-agent.js?v=22.0"></script>
-  <script src="js/agents/cross-validation-agent.js?v=22.0"></script>
-  <script src="js/agents/correction-agent.js?v=22.0"></script>
-  <script src="js/agents/qa-agent.js?v=22.0"></script>
+  <script src="js/agents/image-filters.js?v=23.0"></script>
+  <script src="js/agents/layout-agent.js?v=23.0"></script>
+  <script src="js/agents/script-id-agent.js?v=23.0"></script>
+  <script src="js/agents/cross-validation-agent.js?v=23.0"></script>
+  <script src="js/agents/correction-agent.js?v=23.0"></script>
+  <script src="js/agents/qa-agent.js?v=23.0"></script>
 
   <!-- Services -->
-  <script src="js/gemini-service.js?v=22.0"></script>
+  <script src="js/gemini-service.js?v=23.0"></script>
 
   <!-- Exporters -->
-  <script src="js/exporters/export-searchable-pdf.js?v=22.0"></script>
-  <script src="js/exporters/export-docx.js?v=22.0"></script>
-  <script src="js/exporters/export-txt.js?v=22.0"></script>
-  <script src="js/exporters/export-json.js?v=22.0"></script>
+  <script src="js/exporters/export-searchable-pdf.js?v=23.0"></script>
+  <script src="js/exporters/export-docx.js?v=23.0"></script>
+  <script src="js/exporters/export-txt.js?v=23.0"></script>
+  <script src="js/exporters/export-json.js?v=23.0"></script>
 
   <!-- Infrastructure (depends on agents + data layer) -->
-  <script src="js/preflight.js?v=22.0"></script>
-  <script src="js/page-streamer.js?v=22.0"></script>
-  <script src="js/coordinator.js?v=22.0"></script>
+  <script src="js/preflight.js?v=23.0"></script>
+  <script src="js/page-streamer.js?v=23.0"></script>
+  <script src="js/coordinator.js?v=23.0"></script>
 
   <!-- ============================================================
        TEST SUITE MODAL
@@ -1014,15 +1183,15 @@
   </div>
 
   <!-- UI Components -->
-  <script src="js/components/JobProgress.js?v=22.0"></script>
-  <script src="js/components/ReviewStudio.js?v=22.0"></script>
-  <script src="js/components/UserGuideModal.js?v=22.0"></script>
+  <script src="js/components/JobProgress.js?v=23.0"></script>
+  <script src="js/components/ReviewStudio.js?v=23.0"></script>
+  <script src="js/components/UserGuideModal.js?v=23.0"></script>
 
   <!-- Automated Test Suite -->
-  <script src="tests/test-suite.js?v=22.0"></script>
+  <script src="tests/test-suite.js?v=23.0"></script>
 
   <!-- Main application controller (must load last) -->
-  <script type="module" src="js/app.js?v=22.0"></script>
+  <script type="module" src="js/app.js?v=23.0"></script>
 
   <!-- ============================================================
        UI WIRING (Export Dropdown & Test Modal)
