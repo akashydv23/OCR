@@ -31,7 +31,7 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=20.0">
+  <link rel="stylesheet" href="css/styles.css?v=21.0">
 
   <!-- ============================================================
        CDN LIBRARIES (UMD/IIFE builds — load before app modules)
@@ -89,6 +89,7 @@
     window.OCRStudio = window.OCRStudio || {};
   </script>
   <script src="js/icons.js?v=3.7"></script>
+
 </head>
 <body>
 
@@ -144,12 +145,430 @@
   </nav>
 
   <!-- ============================================================
+       LANDING PAGE (shown to first-time visitors)
+       ============================================================ -->
+  <style>
+    /* ── Landing Page ──────────────────────────────────────── */
+    #landing-page {
+      display: none; /* hidden by default; JS shows it for first-timers */
+      flex-direction: column;
+      overflow-y: auto;
+      height: 100%;
+      background: var(--bg-primary);
+    }
+    #landing-page.active { display: flex; }
+
+    /* Hero */
+    .lp-hero {
+      position: relative;
+      min-height: calc(100vh - 52px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px 64px;
+      overflow: hidden;
+    }
+    .lp-hero-glow {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 520px;
+      background: radial-gradient(ellipse at top, rgba(79,142,247,0.13) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .lp-badge {
+      position: relative;
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 14px; border-radius: 100px;
+      background: rgba(79,142,247,0.10); border: 1px solid rgba(79,142,247,0.28);
+      font-size: 0.74rem; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.7px; margin-bottom: 26px; text-transform: uppercase;
+    }
+    .lp-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 8px var(--accent);
+      animation: lp-blink 2s ease-in-out infinite;
+    }
+    @keyframes lp-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .lp-title {
+      position: relative;
+      font-size: clamp(2.2rem, 5vw, 3.9rem); font-weight: 800;
+      line-height: 1.12; letter-spacing: -0.025em;
+      max-width: 760px; margin-bottom: 18px;
+    }
+    .lp-title .lp-accent { color: var(--accent); }
+    .lp-subtitle {
+      position: relative;
+      font-size: clamp(0.95rem, 1.8vw, 1.1rem); color: var(--text-secondary);
+      max-width: 540px; margin: 0 auto 32px; line-height: 1.75;
+    }
+    .lp-actions {
+      position: relative;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+    }
+    .lp-btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 10px; background: var(--accent);
+      color: #fff; font-size: 0.97rem; font-weight: 700; border: none; cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .lp-btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,142,247,0.3); }
+    .lp-btn-primary svg { flex-shrink: 0; }
+    .lp-btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 26px; border-radius: 10px; background: transparent;
+      color: var(--text-primary); font-size: 0.97rem; font-weight: 600;
+      border: 1px solid var(--border-light); cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .lp-btn-secondary:hover { background: var(--bg-hover); border-color: var(--accent); transform: translateY(-2px); }
+    .lp-btn-secondary svg { flex-shrink: 0; }
+    .lp-note { position: relative; margin-top: 18px; font-size: 0.78rem; color: var(--text-muted); }
+
+    /* Marquee */
+    .lp-marquee-wrap {
+      position: relative; width: 100%; max-width: 820px; margin: 48px auto 0; overflow: hidden;
+    }
+    .lp-marquee-wrap::before, .lp-marquee-wrap::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
+    }
+    .lp-marquee-wrap::before { left: 0;  background: linear-gradient(to right, var(--bg-primary), transparent); }
+    .lp-marquee-wrap::after  { right: 0; background: linear-gradient(to left,  var(--bg-primary), transparent); }
+    .lp-marquee {
+      display: flex; gap: 10px; width: max-content;
+      animation: lp-scroll 24s linear infinite;
+    }
+    .lp-marquee:hover { animation-play-state: paused; }
+    @keyframes lp-scroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .lp-pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px;
+      border-radius: 100px; background: var(--bg-secondary); border: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;
+    }
+    .lp-pill .lp-native { font-size: 1rem; color: var(--text-primary); }
+
+    /* Sections inside landing */
+    .lp-section { padding: 80px 24px; max-width: 1060px; margin: 0 auto; }
+    .lp-divider { height: 1px; background: var(--border); }
+    .lp-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .lp-section-title { font-size: clamp(1.6rem, 3.2vw, 2.4rem); font-weight: 800; line-height: 1.18; margin-bottom: 14px; }
+    .lp-section-sub { font-size: 0.97rem; color: var(--text-secondary); max-width: 540px; line-height: 1.75; }
+
+    /* Steps */
+    .lp-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 2px; margin-top: 48px; background: var(--border); border-radius: 16px; overflow: hidden; }
+    .lp-step { background: var(--bg-secondary); padding: 32px 26px; transition: background 0.2s; }
+    .lp-step:hover { background: var(--bg-tertiary); }
+    .lp-step-num { font-size: 2.5rem; font-weight: 900; color: rgba(79,142,247,0.1); line-height: 1; margin-bottom: 12px; }
+    .lp-step-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-glow, rgba(79,142,247,0.18)); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; color: var(--accent); }
+    .lp-step-icon svg { width: 20px; height: 20px; }
+    .lp-step h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .lp-step p  { font-size: 0.845rem; color: var(--text-secondary); line-height: 1.65; }
+
+    /* Features */
+    .lp-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 2px; margin-top: 48px; background: var(--border); border-radius: 16px; overflow: hidden; }
+    .lp-feat { background: var(--bg-secondary); padding: 28px; transition: background 0.2s; }
+    .lp-feat:hover { background: var(--bg-tertiary); }
+    .lp-feat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .lp-feat-icon svg { width: 22px; height: 22px; }
+    .lp-feat h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .lp-feat p  { font-size: 0.845rem; color: var(--text-secondary); line-height: 1.65; }
+    .lp-tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 100px; font-size: 0.71rem; font-weight: 600; background: rgba(79,142,247,0.08); color: var(--accent); border: 1px solid rgba(79,142,247,0.18); }
+    .lp-icon-blue   { background: rgba(79,142,247,0.13); color: #4f8ef7; }
+    .lp-icon-green  { background: rgba(76,175,125,0.13); color: #4caf7d; }
+    .lp-icon-amber  { background: rgba(240,165,0,0.13);  color: #f0a500; }
+    .lp-icon-purple { background: rgba(160,100,240,0.13);color: #a064f0; }
+    .lp-icon-teal   { background: rgba(0,200,180,0.13);  color: #00c8b4; }
+    .lp-icon-red    { background: rgba(224,81,81,0.13);  color: #e05151; }
+
+    /* Engine comparison */
+    .lp-engines { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 40px; }
+    .lp-engine { border-radius: 14px; border: 1px solid var(--border); padding: 28px; background: var(--bg-secondary); position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
+    .lp-engine:hover { border-color: var(--border-light); transform: translateY(-2px); }
+    .lp-engine.lp-rec { border-color: rgba(79,142,247,0.38); background: linear-gradient(140deg, var(--bg-secondary) 0%, rgba(79,142,247,0.04) 100%); }
+    .lp-rec-badge { position: absolute; top: 14px; right: 14px; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 100px; background: var(--accent); color: #fff; }
+    .lp-eng-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; margin-bottom: 16px; }
+    .lp-eng-badge.wasm { background: rgba(76,175,125,0.12); color: #4caf7d; }
+    .lp-eng-badge.ai   { background: rgba(79,142,247,0.12); color: #4f8ef7; }
+    .lp-engine h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .lp-speed { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); margin: 12px 0 6px; }
+    .lp-speed small { font-size: 0.86rem; font-weight: 500; color: var(--text-secondary); }
+    .lp-engine > p { font-size: 0.845rem; color: var(--text-secondary); line-height: 1.65; }
+    .lp-pros { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+    .lp-pros li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: var(--text-secondary); }
+    .lp-pros li::before { content: '✓'; color: var(--success); font-weight: 700; flex-shrink: 0; }
+
+    /* Language grid */
+    .lp-langs { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 9px; margin-top: 40px; }
+    .lp-lang { border-radius: 10px; border: 1px solid var(--border); background: var(--bg-secondary); padding: 16px 12px; text-align: center; transition: border-color 0.2s, background 0.2s, transform 0.2s; cursor: default; }
+    .lp-lang:hover { border-color: rgba(79,142,247,0.38); background: var(--bg-tertiary); transform: translateY(-3px); }
+    .lp-lang-native { font-size: 1.65rem; line-height: 1.25; margin-bottom: 5px; display: block; }
+    .lp-lang-name { font-size: 0.74rem; font-weight: 600; color: var(--text-secondary); }
+
+    /* Privacy stats */
+    .lp-privacy { border-radius: 18px; border: 1px solid rgba(79,142,247,0.22); background: linear-gradient(140deg, rgba(79,142,247,0.055) 0%, transparent 60%); padding: 48px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
+    .lp-privacy h2 { font-size: clamp(1.4rem, 2.8vw, 2rem); font-weight: 800; margin-bottom: 12px; line-height: 1.25; }
+    .lp-privacy p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.72; margin-bottom: 12px; }
+    .lp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .lp-stat { background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border); padding: 20px 16px; text-align: center; }
+    .lp-stat-val { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 4px; }
+    .lp-stat-lbl { font-size: 0.74rem; color: var(--text-secondary); line-height: 1.4; }
+
+    /* CTA at bottom of landing */
+    .lp-cta { padding: 80px 24px; text-align: center; }
+    .lp-cta h2 { font-size: clamp(1.9rem, 4vw, 2.9rem); font-weight: 800; margin-bottom: 12px; line-height: 1.13; }
+    .lp-cta p { color: var(--text-secondary); font-size: 0.97rem; margin-bottom: 28px; line-height: 1.72; }
+
+    /* Fade-up animation */
+    .lp-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .lp-fade.lp-visible { opacity: 1; transform: translateY(0); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .lp-engines { grid-template-columns: 1fr; }
+      .lp-privacy { grid-template-columns: 1fr; padding: 30px 20px; gap: 26px; }
+    }
+    @media (max-width: 480px) {
+      .lp-actions { flex-direction: column; width: 100%; }
+      .lp-btn-primary, .lp-btn-secondary { width: 100%; justify-content: center; }
+    }
+  </style>
+
+  <!-- ============================================================
        MAIN CONTENT
        ============================================================ -->
   <main id="main-content">
 
+    <!-- ── Landing Page ───────────────────────────────────────────── -->
+    <section id="landing-page" class="active">
+
+      <!-- Hero -->
+      <div class="lp-hero">
+        <div class="lp-hero-glow"></div>
+        <div class="lp-badge"><div class="lp-badge-dot"></div>100% Browser-Native &nbsp;·&nbsp; Zero Server</div>
+        <h1 class="lp-title">OCR for <span class="lp-accent">Indian Languages</span>,<br>Right in Your Browser</h1>
+        <p class="lp-subtitle">Extract text from PDFs and images in Hindi, Tamil, Telugu, Bengali and 9 more scripts — entirely on your device. No uploads. No cloud. Complete privacy.</p>
+        <div class="lp-actions">
+          <button class="lp-btn-primary" id="lp-btn-open-app">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+            Try OCR Studio Free
+          </button>
+          <button class="lp-btn-secondary" id="lp-btn-learn-more">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+            See how it works
+          </button>
+        </div>
+        <p class="lp-note">&#x1F512; No sign-up required &nbsp;·&nbsp; Works offline &nbsp;·&nbsp; MIT licensed</p>
+        <div class="lp-marquee-wrap">
+          <div class="lp-marquee">
+            <div class="lp-pill"><span class="lp-native">हिन्दी</span> Hindi</div>
+            <div class="lp-pill"><span class="lp-native">मराठी</span> Marathi</div>
+            <div class="lp-pill"><span class="lp-native">தமிழ்</span> Tamil</div>
+            <div class="lp-pill"><span class="lp-native">తెలుగు</span> Telugu</div>
+            <div class="lp-pill"><span class="lp-native">বাংলা</span> Bengali</div>
+            <div class="lp-pill"><span class="lp-native">ગુજરાતી</span> Gujarati</div>
+            <div class="lp-pill"><span class="lp-native">ಕನ್ನಡ</span> Kannada</div>
+            <div class="lp-pill"><span class="lp-native">മലയാളം</span> Malayalam</div>
+            <div class="lp-pill"><span class="lp-native">ਪੰਜਾਬੀ</span> Punjabi</div>
+            <div class="lp-pill"><span class="lp-native">ଓଡ଼ିଆ</span> Odia</div>
+            <div class="lp-pill"><span class="lp-native">संस्कृत</span> Sanskrit</div>
+            <div class="lp-pill"><span class="lp-native">اردو</span> Urdu</div>
+            <div class="lp-pill"><span class="lp-native">English</span> Latin</div>
+            <!-- duplicate for seamless loop -->
+            <div class="lp-pill"><span class="lp-native">हिन्दी</span> Hindi</div>
+            <div class="lp-pill"><span class="lp-native">मराठी</span> Marathi</div>
+            <div class="lp-pill"><span class="lp-native">தமிழ்</span> Tamil</div>
+            <div class="lp-pill"><span class="lp-native">తెలుగు</span> Telugu</div>
+            <div class="lp-pill"><span class="lp-native">বাংলা</span> Bengali</div>
+            <div class="lp-pill"><span class="lp-native">ગુજરાતી</span> Gujarati</div>
+            <div class="lp-pill"><span class="lp-native">ಕನ್ನಡ</span> Kannada</div>
+            <div class="lp-pill"><span class="lp-native">മലയാളം</span> Malayalam</div>
+            <div class="lp-pill"><span class="lp-native">ਪੰਜਾਬੀ</span> Punjabi</div>
+            <div class="lp-pill"><span class="lp-native">ଓଡ଼ିଆ</span> Odia</div>
+            <div class="lp-pill"><span class="lp-native">संस्कृत</span> Sanskrit</div>
+            <div class="lp-pill"><span class="lp-native">اردو</span> Urdu</div>
+            <div class="lp-pill"><span class="lp-native">English</span> Latin</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="lp-divider"></div>
+      <div class="lp-section" id="lp-how">
+        <p class="lp-label lp-fade">How it works</p>
+        <h2 class="lp-section-title lp-fade">From document to text<br>in a few clicks</h2>
+        <p class="lp-section-sub lp-fade">No accounts, no configuration. Drop your file and get clean, searchable text.</p>
+        <div class="lp-steps">
+          <div class="lp-step lp-fade">
+            <div class="lp-step-num">01</div>
+            <div class="lp-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+            <h3>Drop or browse your file</h3>
+            <p>Upload a PDF, PNG, JPEG, TIFF, or WebP. The file never leaves your browser — everything runs locally.</p>
+          </div>
+          <div class="lp-step lp-fade">
+            <div class="lp-step-num">02</div>
+            <div class="lp-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <h3>Auto-detect language &amp; OCR</h3>
+            <p>The engine identifies the script in milliseconds. Choose on-device WASM or AI-accelerated mode for ~1 s/page.</p>
+          </div>
+          <div class="lp-step lp-fade">
+            <div class="lp-step-num">03</div>
+            <div class="lp-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+            <h3>Review inline</h3>
+            <p>Bounding-box overlays show confidence per word. Edit results directly in the studio before exporting.</p>
+          </div>
+          <div class="lp-step lp-fade">
+            <div class="lp-step-num">04</div>
+            <div class="lp-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <h3>Export in your format</h3>
+            <p>Download searchable PDF, editable DOCX, plain TXT, or a rich JSON audit file with word-level coordinates.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="lp-divider"></div>
+      <div class="lp-section">
+        <p class="lp-label lp-fade">Features</p>
+        <h2 class="lp-section-title lp-fade">Everything you need,<br>nothing you don't</h2>
+        <div class="lp-features">
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+            <h3>100% Client-Side Privacy</h3>
+            <p>Zero bytes of your document leave the device. Image preprocessing, deskewing, binarization, and OCR all run inside your browser via WebAssembly.</p>
+            <span class="lp-tag">Zero data transmission</span>
+          </div>
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <h3>Dual-Engine Acceleration</h3>
+            <p>On-Device WASM for full offline operation, or Gemini AI Fast Mode for ~1 second per page when speed matters. Switch instantly.</p>
+            <span class="lp-tag">Tesseract.js · Gemini AI</span>
+          </div>
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg></div>
+            <h3>Instant Language Auto-Detection</h3>
+            <p>Tier 1 detects digital PDFs in 2 ms via Unicode classification. Tier 2 handles scanned pages in ~300 ms via AI multimodal analysis.</p>
+            <span class="lp-tag">13 Indian scripts</span>
+          </div>
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/></svg></div>
+            <h3>Multi-Format Export</h3>
+            <p>Searchable PDF with invisible text overlay, Word DOCX with structure, plain UTF-8 TXT, and a full audit JSON with word coordinates.</p>
+            <span class="lp-tag">PDF · DOCX · TXT · JSON</span>
+          </div>
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+            <h3>PWA &amp; Offline Support</h3>
+            <p>Installs as a native-like app on any device. Service Worker cache-first architecture means it works without internet after first load.</p>
+            <span class="lp-tag">Works offline</span>
+          </div>
+          <div class="lp-feat lp-fade">
+            <div class="lp-feat-icon lp-icon-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            <h3>Confidence Bounding Boxes</h3>
+            <p>Every recognized word is overlaid with a color-coded box — green (high), amber (medium), red (low) — so you instantly know what to review.</p>
+            <span class="lp-tag">Word-level confidence</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engine comparison -->
+      <div class="lp-divider"></div>
+      <div class="lp-section">
+        <p class="lp-label lp-fade">OCR Engines</p>
+        <h2 class="lp-section-title lp-fade">Choose your processing mode</h2>
+        <p class="lp-section-sub lp-fade">Both engines produce verbatim transcription — zero translation, zero transliteration.</p>
+        <div class="lp-engines">
+          <div class="lp-engine lp-fade">
+            <div class="lp-eng-badge wasm"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> On-Device WASM</div>
+            <h3>Tesseract.js v5</h3>
+            <div class="lp-speed">~8 s <small>/ page</small></div>
+            <p>Runs entirely inside your browser via WebAssembly. No API key. Fully offline once loaded.</p>
+            <ul class="lp-pros">
+              <li>Absolute privacy — zero network requests</li>
+              <li>Works offline after first visit</li>
+              <li>No API key or account required</li>
+              <li>Supports all 13 Indian scripts</li>
+            </ul>
+          </div>
+          <div class="lp-engine lp-rec lp-fade">
+            <span class="lp-rec-badge">Recommended</span>
+            <div class="lp-eng-badge ai"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Gemini AI Fast Mode</div>
+            <h3>Google Gemini Flash / Pro</h3>
+            <div class="lp-speed">~1 s <small>/ page</small></div>
+            <p>Multimodal AI transcription via the Gemini API. 8× faster with superior accuracy on poor scans.</p>
+            <ul class="lp-pros">
+              <li>~1 second per page throughput</li>
+              <li>Superior accuracy on degraded scans</li>
+              <li>Handles complex mixed-script documents</li>
+              <li>Free tier available with a Gemini API key</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Languages -->
+      <div class="lp-divider"></div>
+      <div class="lp-section">
+        <p class="lp-label lp-fade">Language Support</p>
+        <h2 class="lp-section-title lp-fade">13 scripts, fully supported</h2>
+        <p class="lp-section-sub lp-fade">Strict verbatim transcription — the exact script of the original document, always preserved.</p>
+        <div class="lp-langs">
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">हिन्दी</span><div class="lp-lang-name">Hindi</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">मराठी</span><div class="lp-lang-name">Marathi</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">தமிழ்</span><div class="lp-lang-name">Tamil</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">తెలుగు</span><div class="lp-lang-name">Telugu</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">বাংলা</span><div class="lp-lang-name">Bengali</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">ગુજરાતી</span><div class="lp-lang-name">Gujarati</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">ಕನ್ನಡ</span><div class="lp-lang-name">Kannada</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">മലയാളം</span><div class="lp-lang-name">Malayalam</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">ਪੰਜਾਬੀ</span><div class="lp-lang-name">Punjabi</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">ଓଡ଼ିଆ</span><div class="lp-lang-name">Odia</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">संस्कृत</span><div class="lp-lang-name">Sanskrit</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">اردو</span><div class="lp-lang-name">Urdu</div></div>
+          <div class="lp-lang lp-fade"><span class="lp-lang-native">English</span><div class="lp-lang-name">English</div></div>
+        </div>
+      </div>
+
+      <!-- Privacy stats -->
+      <div class="lp-divider"></div>
+      <div class="lp-section">
+        <div class="lp-privacy lp-fade">
+          <div>
+            <p class="lp-label" style="margin-bottom:8px;">Privacy First</p>
+            <h2>Your documents stay<br>on your device</h2>
+            <p>In on-device mode, OCR Studio processes everything inside your browser's sandbox. No telemetry, no analytics, no cloud storage. There is no server that could receive your files.</p>
+            <p>In Gemini AI mode, only the page image is sent to the Gemini API using your own API key.</p>
+            <button class="lp-btn-primary lp-btn-cta-privacy" style="margin-top:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start processing documents
+            </button>
+          </div>
+          <div class="lp-stats">
+            <div class="lp-stat"><div class="lp-stat-val">0</div><div class="lp-stat-lbl">Bytes transmitted<br>in on-device mode</div></div>
+            <div class="lp-stat"><div class="lp-stat-val">13</div><div class="lp-stat-lbl">Indian scripts<br>supported</div></div>
+            <div class="lp-stat"><div class="lp-stat-val">~1s</div><div class="lp-stat-lbl">Per page with<br>Gemini AI mode</div></div>
+            <div class="lp-stat"><div class="lp-stat-val">4</div><div class="lp-stat-lbl">Export formats<br>available</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom CTA -->
+      <div class="lp-divider"></div>
+      <div class="lp-cta">
+        <h2 class="lp-fade">Ready to extract text<br>from your documents?</h2>
+        <p class="lp-fade">No account. No upload. Works in any modern browser. Free and open source.</p>
+        <div class="lp-actions lp-fade">
+          <button class="lp-btn-primary lp-btn-cta-bottom">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Open OCR Studio
+          </button>
+        </div>
+      </div>
+
+    </section><!-- /#landing-page -->
+
     <!-- ── Upload Zone ────────────────────────────────────────────── -->
-    <section id="upload-zone" class="active">
+    <section id="upload-zone" class="hidden">
       <!-- Drop Area (shown by default) -->
       <div id="drop-area">
         <div class="drop-icon" style="color:var(--accent);">
@@ -478,31 +897,31 @@
        ============================================================ -->
 
   <!-- Core data layer -->
-  <script src="js/canonical-doc.js?v=20.0"></script>
-  <script src="js/db.js?v=20.0"></script>
-  <script src="js/samples.js?v=20.0"></script>
+  <script src="js/canonical-doc.js?v=21.0"></script>
+  <script src="js/db.js?v=21.0"></script>
+  <script src="js/samples.js?v=21.0"></script>
 
   <!-- Pipeline agents (no deps on each other) -->
-  <script src="js/agents/image-filters.js?v=20.0"></script>
-  <script src="js/agents/layout-agent.js?v=20.0"></script>
-  <script src="js/agents/script-id-agent.js?v=20.0"></script>
-  <script src="js/agents/cross-validation-agent.js?v=20.0"></script>
-  <script src="js/agents/correction-agent.js?v=20.0"></script>
-  <script src="js/agents/qa-agent.js?v=20.0"></script>
+  <script src="js/agents/image-filters.js?v=21.0"></script>
+  <script src="js/agents/layout-agent.js?v=21.0"></script>
+  <script src="js/agents/script-id-agent.js?v=21.0"></script>
+  <script src="js/agents/cross-validation-agent.js?v=21.0"></script>
+  <script src="js/agents/correction-agent.js?v=21.0"></script>
+  <script src="js/agents/qa-agent.js?v=21.0"></script>
 
   <!-- Services -->
-  <script src="js/gemini-service.js?v=20.0"></script>
+  <script src="js/gemini-service.js?v=21.0"></script>
 
   <!-- Exporters -->
-  <script src="js/exporters/export-searchable-pdf.js?v=20.0"></script>
-  <script src="js/exporters/export-docx.js?v=20.0"></script>
-  <script src="js/exporters/export-txt.js?v=20.0"></script>
-  <script src="js/exporters/export-json.js?v=20.0"></script>
+  <script src="js/exporters/export-searchable-pdf.js?v=21.0"></script>
+  <script src="js/exporters/export-docx.js?v=21.0"></script>
+  <script src="js/exporters/export-txt.js?v=21.0"></script>
+  <script src="js/exporters/export-json.js?v=21.0"></script>
 
   <!-- Infrastructure (depends on agents + data layer) -->
-  <script src="js/preflight.js?v=20.0"></script>
-  <script src="js/page-streamer.js?v=20.0"></script>
-  <script src="js/coordinator.js?v=20.0"></script>
+  <script src="js/preflight.js?v=21.0"></script>
+  <script src="js/page-streamer.js?v=21.0"></script>
+  <script src="js/coordinator.js?v=21.0"></script>
 
   <!-- ============================================================
        TEST SUITE MODAL
@@ -532,15 +951,15 @@
   </div>
 
   <!-- UI Components -->
-  <script src="js/components/JobProgress.js?v=20.0"></script>
-  <script src="js/components/ReviewStudio.js?v=20.0"></script>
-  <script src="js/components/UserGuideModal.js?v=20.0"></script>
+  <script src="js/components/JobProgress.js?v=21.0"></script>
+  <script src="js/components/ReviewStudio.js?v=21.0"></script>
+  <script src="js/components/UserGuideModal.js?v=21.0"></script>
 
   <!-- Automated Test Suite -->
-  <script src="tests/test-suite.js?v=20.0"></script>
+  <script src="tests/test-suite.js?v=21.0"></script>
 
   <!-- Main application controller (must load last) -->
-  <script type="module" src="js/app.js?v=20.0"></script>
+  <script type="module" src="js/app.js?v=21.0"></script>
 
   <!-- ============================================================
        UI WIRING (Export Dropdown & Test Modal)

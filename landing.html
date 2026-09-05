@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en-IN" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IndicOCR Studio — Zero-server, browser-native OCR for Indian regional languages. Process Hindi, Tamil, Telugu, Bengali & 9 more scripts entirely on-device, with full privacy.">
+  <meta name="theme-color" content="#0f1117">
+  <title>IndicOCR Studio — Browser-Native OCR for Indian Languages</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234f8ef7'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/></svg>">
+  <style>
+    :root {
+      --bg-primary:   #0f1117;
+      --bg-secondary: #1a1d27;
+      --bg-tertiary:  #242836;
+      --bg-hover:     #2d3245;
+      --accent:       #4f8ef7;
+      --accent-hover: #6ba3ff;
+      --accent-glow:  rgba(79,142,247,0.18);
+      --text-primary:   #e8eaf0;
+      --text-secondary: #8892a4;
+      --text-muted:     #525c6e;
+      --border:       #2a2f42;
+      --border-light: #353b52;
+      --success: #4caf7d;
+      --warning: #f0a500;
+      --danger:  #e05151;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-tertiary); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+    * { scrollbar-width: thin; scrollbar-color: var(--accent) var(--bg-tertiary); }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px; height: 56px;
+      background: rgba(15,17,23,0.88);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.05rem; color: var(--text-primary);
+    }
+    .nav-brand svg { color: var(--accent); width: 22px; height: 22px; flex-shrink: 0; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-link {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.85rem;
+      color: var(--text-secondary); transition: color 0.2s, background 0.2s;
+    }
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .btn-nav-cta {
+      padding: 7px 18px; border-radius: 8px; background: var(--accent);
+      color: #fff; font-size: 0.85rem; font-weight: 600;
+      transition: background 0.2s, transform 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-nav-cta:hover { background: var(--accent-hover); transform: translateY(-1px); color: #fff; }
+
+    /* HERO */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 100px 24px 80px; overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 580px;
+      background: radial-gradient(ellipse at top, rgba(79,142,247,0.13) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      position: relative;
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 14px; border-radius: 100px;
+      background: rgba(79,142,247,0.10); border: 1px solid rgba(79,142,247,0.28);
+      font-size: 0.74rem; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.7px; margin-bottom: 28px; text-transform: uppercase;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 8px var(--accent);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hero-title {
+      position: relative;
+      font-size: clamp(2.3rem, 5.5vw, 4.1rem); font-weight: 800;
+      line-height: 1.12; letter-spacing: -0.025em;
+      max-width: 780px; margin-bottom: 20px;
+    }
+    .hero-title .accent { color: var(--accent); }
+    .hero-subtitle {
+      position: relative;
+      font-size: clamp(0.97rem, 2vw, 1.13rem); color: var(--text-secondary);
+      max-width: 550px; margin: 0 auto 34px; line-height: 1.75;
+    }
+    .hero-actions {
+      position: relative;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+    }
+    .btn-primary-lg {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 10px; background: var(--accent);
+      color: #fff; font-size: 0.97rem; font-weight: 700;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-primary-lg:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,142,247,0.3); color:#fff; }
+    .btn-secondary-lg {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 26px; border-radius: 10px; background: transparent;
+      color: var(--text-primary); font-size: 0.97rem; font-weight: 600;
+      border: 1px solid var(--border-light);
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .btn-secondary-lg:hover { background: var(--bg-hover); border-color: var(--accent); transform: translateY(-2px); color: var(--text-primary); }
+    .hero-note { position: relative; margin-top: 18px; font-size: 0.78rem; color: var(--text-muted); }
+
+    /* MARQUEE */
+    .script-marquee-wrap {
+      position: relative; width: 100%; max-width: 820px; margin: 52px auto 0; overflow: hidden;
+    }
+    .script-marquee-wrap::before, .script-marquee-wrap::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
+    }
+    .script-marquee-wrap::before { left: 0;  background: linear-gradient(to right, var(--bg-primary), transparent); }
+    .script-marquee-wrap::after  { right: 0; background: linear-gradient(to left,  var(--bg-primary), transparent); }
+    .script-marquee {
+      display: flex; gap: 10px; width: max-content;
+      animation: marquee 24s linear infinite;
+    }
+    .script-marquee:hover { animation-play-state: paused; }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .script-pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px;
+      border-radius: 100px; background: var(--bg-secondary); border: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;
+    }
+    .script-pill .native { font-size: 1rem; color: var(--text-primary); }
+
+    /* SECTION */
+    .section { padding: 88px 24px; max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .section-title { font-size: clamp(1.7rem, 3.5vw, 2.6rem); font-weight: 800; line-height: 1.18; margin-bottom: 14px; }
+    .section-subtitle { font-size: 1rem; color: var(--text-secondary); max-width: 560px; line-height: 1.75; }
+    .divider { height: 1px; background: var(--border); }
+
+    /* STEPS */
+    .steps {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2px; margin-top: 52px; background: var(--border); border-radius: 16px; overflow: hidden;
+    }
+    .step { background: var(--bg-secondary); padding: 34px 28px; transition: background 0.2s; }
+    .step:hover { background: var(--bg-tertiary); }
+    .step-number { font-size: 2.6rem; font-weight: 900; color: rgba(79,142,247,0.1); line-height: 1; margin-bottom: 14px; }
+    .step-icon {
+      width: 42px; height: 42px; border-radius: 10px; background: var(--accent-glow);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--accent);
+    }
+    .step-icon svg { width: 20px; height: 20px; }
+    .step h3 { font-size: 0.97rem; font-weight: 700; margin-bottom: 8px; }
+    .step p  { font-size: 0.855rem; color: var(--text-secondary); line-height: 1.65; }
+
+    /* FEATURE GRID */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2px; margin-top: 52px; background: var(--border); border-radius: 16px; overflow: hidden;
+    }
+    .feature-card { background: var(--bg-secondary); padding: 30px; transition: background 0.2s; }
+    .feature-card:hover { background: var(--bg-tertiary); }
+    .feature-icon { width: 46px; height: 46px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+    .feature-icon svg { width: 22px; height: 22px; }
+    .icon-blue   { background: rgba(79,142,247,0.13); color: #4f8ef7; }
+    .icon-green  { background: rgba(76,175,125,0.13); color: #4caf7d; }
+    .icon-amber  { background: rgba(240,165,0,0.13);  color: #f0a500; }
+    .icon-purple { background: rgba(160,100,240,0.13);color: #a064f0; }
+    .icon-teal   { background: rgba(0,200,180,0.13);  color: #00c8b4; }
+    .icon-red    { background: rgba(224,81,81,0.13);  color: #e05151; }
+    .feature-card h3 { font-size: 0.97rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p  { font-size: 0.855rem; color: var(--text-secondary); line-height: 1.65; }
+    .feature-tag {
+      display: inline-block; margin-top: 12px; padding: 3px 10px; border-radius: 100px;
+      font-size: 0.72rem; font-weight: 600;
+      background: rgba(79,142,247,0.08); color: var(--accent); border: 1px solid rgba(79,142,247,0.18);
+    }
+
+    /* ENGINE COMPARISON */
+    .engine-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 44px; }
+    .engine-card {
+      border-radius: 14px; border: 1px solid var(--border); padding: 30px;
+      background: var(--bg-secondary); position: relative; overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .engine-card:hover { border-color: var(--border-light); transform: translateY(-2px); }
+    .engine-card.recommended {
+      border-color: rgba(79,142,247,0.38);
+      background: linear-gradient(140deg, var(--bg-secondary) 0%, rgba(79,142,247,0.04) 100%);
+    }
+    .rec-badge {
+      position: absolute; top: 14px; right: 14px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px;
+      padding: 3px 10px; border-radius: 100px; background: var(--accent); color: #fff;
+    }
+    .engine-badge {
+      display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px;
+      border-radius: 100px; font-size: 0.73rem; font-weight: 700; margin-bottom: 18px;
+    }
+    .engine-badge.on-device { background: rgba(76,175,125,0.12); color: #4caf7d; }
+    .engine-badge.ai        { background: rgba(79,142,247,0.12);  color: #4f8ef7; }
+    .engine-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .engine-speed { font-size: 1.9rem; font-weight: 800; color: var(--text-primary); margin: 14px 0 8px; }
+    .engine-speed small { font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); }
+    .engine-card > p { font-size: 0.855rem; color: var(--text-secondary); line-height: 1.65; }
+    .engine-pros { list-style: none; margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+    .engine-pros li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.835rem; color: var(--text-secondary); }
+    .engine-pros li::before { content: '✓'; color: var(--success); font-weight: 700; flex-shrink: 0; }
+
+    /* LANG GRID */
+    .lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; margin-top: 44px; }
+    .lang-card {
+      border-radius: 10px; border: 1px solid var(--border); background: var(--bg-secondary);
+      padding: 18px 14px; text-align: center; transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    }
+    .lang-card:hover { border-color: rgba(79,142,247,0.38); background: var(--bg-tertiary); transform: translateY(-3px); }
+    .lang-native { font-size: 1.75rem; line-height: 1.25; margin-bottom: 6px; display: block; }
+    .lang-name   { font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); }
+
+    /* EXPORT */
+    .export-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 44px; }
+    .export-card {
+      border-radius: 12px; border: 1px solid var(--border); background: var(--bg-secondary);
+      padding: 22px; display: flex; align-items: flex-start; gap: 14px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .export-card:hover { border-color: var(--border-light); transform: translateY(-2px); }
+    .fmt-badge {
+      flex-shrink: 0; width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.3px;
+    }
+    .fmt-pdf  { background: rgba(224,81,81,0.13); color: #e05151; }
+    .fmt-docx { background: rgba(79,142,247,0.13); color: #4f8ef7; }
+    .fmt-txt  { background: rgba(76,175,125,0.13); color: #4caf7d; }
+    .fmt-json { background: rgba(240,165,0,0.13);  color: #f0a500; }
+    .export-info h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 4px; }
+    .export-info p  { font-size: 0.79rem; color: var(--text-secondary); line-height: 1.5; }
+
+    /* PRIVACY */
+    .privacy-box {
+      border-radius: 18px; border: 1px solid rgba(79,142,247,0.22);
+      background: linear-gradient(140deg, rgba(79,142,247,0.055) 0%, transparent 60%);
+      padding: 52px 44px; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 48px; align-items: center;
+    }
+    .privacy-box h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 14px; line-height: 1.25; }
+    .privacy-box p { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.72; margin-bottom: 14px; }
+    .privacy-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .privacy-stat { background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border); padding: 22px 18px; text-align: center; }
+    .stat-value { font-size: 2.1rem; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.45; }
+
+    /* CTA */
+    .cta-section { padding: 92px 24px; text-align: center; }
+    .cta-inner { max-width: 620px; margin: 0 auto; }
+    .cta-inner h2 { font-size: clamp(2rem, 4.5vw, 3.1rem); font-weight: 800; margin-bottom: 14px; line-height: 1.13; }
+    .cta-inner > p { color: var(--text-secondary); font-size: 1rem; margin-bottom: 32px; line-height: 1.72; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 36px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
+    .footer-brand svg { color: var(--accent); width: 18px; height: 18px; flex-shrink: 0; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+    .footer-links a { font-size: 0.8rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text-primary); }
+    .footer-copy { font-size: 0.76rem; color: var(--text-muted); }
+
+    /* ANIMATIONS */
+    .fade-up { opacity: 0; transform: translateY(22px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      .engine-cards { grid-template-columns: 1fr; }
+      .privacy-box { grid-template-columns: 1fr; padding: 32px 22px; gap: 28px; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; width: 100%; }
+      .btn-primary-lg, .btn-secondary-lg { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="landing.html" class="nav-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    OCR Studio
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#languages" class="nav-link">Languages</a>
+    <a href="#privacy" class="nav-link">Privacy</a>
+  </div>
+  <a href="index.html" class="btn-nav-cta">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Open App
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><div class="hero-badge-dot"></div>100% Browser-Native &nbsp;·&nbsp; Zero Server</div>
+  <h1 class="hero-title">OCR for <span class="accent">Indian Languages</span>,<br>Right in Your Browser</h1>
+  <p class="hero-subtitle">Extract text from PDFs and images in Hindi, Tamil, Telugu, Bengali and 9 more scripts — entirely on your device. No uploads. No cloud. Complete privacy.</p>
+  <div class="hero-actions">
+    <a href="index.html" class="btn-primary-lg">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+      Try OCR Studio Free
+    </a>
+    <a href="#how-it-works" class="btn-secondary-lg">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+      See how it works
+    </a>
+  </div>
+  <p class="hero-note">&#x1F512; No sign-up required &nbsp;·&nbsp; Works offline &nbsp;·&nbsp; MIT licensed</p>
+  <div class="script-marquee-wrap">
+    <div class="script-marquee">
+      <div class="script-pill"><span class="native">हिन्दी</span> Hindi</div>
+      <div class="script-pill"><span class="native">मराठी</span> Marathi</div>
+      <div class="script-pill"><span class="native">தமிழ்</span> Tamil</div>
+      <div class="script-pill"><span class="native">తెలుగు</span> Telugu</div>
+      <div class="script-pill"><span class="native">বাংলা</span> Bengali</div>
+      <div class="script-pill"><span class="native">ગુજરાતી</span> Gujarati</div>
+      <div class="script-pill"><span class="native">ಕನ್ನಡ</span> Kannada</div>
+      <div class="script-pill"><span class="native">മലയാളം</span> Malayalam</div>
+      <div class="script-pill"><span class="native">ਪੰਜਾਬੀ</span> Punjabi</div>
+      <div class="script-pill"><span class="native">ଓଡ଼ିଆ</span> Odia</div>
+      <div class="script-pill"><span class="native">संस्कृत</span> Sanskrit</div>
+      <div class="script-pill"><span class="native">اردو</span> Urdu</div>
+      <div class="script-pill"><span class="native">English</span> Latin</div>
+      <div class="script-pill"><span class="native">हिन्दी</span> Hindi</div>
+      <div class="script-pill"><span class="native">मराठी</span> Marathi</div>
+      <div class="script-pill"><span class="native">தமிழ்</span> Tamil</div>
+      <div class="script-pill"><span class="native">తెలుగు</span> Telugu</div>
+      <div class="script-pill"><span class="native">বাংলা</span> Bengali</div>
+      <div class="script-pill"><span class="native">ગુજરાતી</span> Gujarati</div>
+      <div class="script-pill"><span class="native">ಕನ್ನಡ</span> Kannada</div>
+      <div class="script-pill"><span class="native">മലയാളം</span> Malayalam</div>
+      <div class="script-pill"><span class="native">ਪੰਜਾਬੀ</span> Punjabi</div>
+      <div class="script-pill"><span class="native">ଓଡ଼ିଆ</span> Odia</div>
+      <div class="script-pill"><span class="native">संस्कृत</span> Sanskrit</div>
+      <div class="script-pill"><span class="native">اردو</span> Urdu</div>
+      <div class="script-pill"><span class="native">English</span> Latin</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section">
+  <p class="section-label fade-up">How it works</p>
+  <h2 class="section-title fade-up">From document to text<br>in a few clicks</h2>
+  <p class="section-subtitle fade-up">No accounts, no configuration. Drop your file and get clean, searchable text.</p>
+  <div class="steps">
+    <div class="step fade-up">
+      <div class="step-number">01</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <h3>Drop or browse your file</h3>
+      <p>Upload a PDF, PNG, JPEG, TIFF, or WebP. The file never leaves your browser — everything runs locally.</p>
+    </div>
+    <div class="step fade-up">
+      <div class="step-number">02</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <h3>Auto-detect language &amp; OCR</h3>
+      <p>The engine identifies the script in milliseconds. Choose on-device WASM or AI-accelerated mode for ~1 s/page speed.</p>
+    </div>
+    <div class="step fade-up">
+      <div class="step-number">03</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+      <h3>Review inline</h3>
+      <p>Bounding-box overlays show confidence per word. Edit results directly in the studio before exporting.</p>
+    </div>
+    <div class="step fade-up">
+      <div class="step-number">04</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <h3>Export in your format</h3>
+      <p>Download searchable PDF, editable DOCX, plain TXT, or a rich JSON audit file with word-level coordinates.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section id="features" class="section">
+  <p class="section-label fade-up">Features</p>
+  <h2 class="section-title fade-up">Everything you need,<br>nothing you don't</h2>
+  <div class="features-grid">
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+      <h3>100% Client-Side Privacy</h3>
+      <p>In standard mode, zero bytes of your document leave the device. Image preprocessing, deskewing, binarization, and OCR all run inside your browser via WebAssembly.</p>
+      <span class="feature-tag">Zero data transmission</span>
+    </div>
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <h3>Dual-Engine Acceleration</h3>
+      <p>On-Device WASM for full offline operation, or Gemini AI Fast Mode for ~1 second per page when speed matters. Switch instantly between engines.</p>
+      <span class="feature-tag">Tesseract.js · Gemini AI</span>
+    </div>
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg></div>
+      <h3>Instant Language Auto-Detection</h3>
+      <p>Tier 1 detects digital PDFs in 2 ms via Unicode script classification. Tier 2 handles scanned pages in ~300 ms via AI multimodal analysis.</p>
+      <span class="feature-tag">13 Indian scripts</span>
+    </div>
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/></svg></div>
+      <h3>Multi-Format Export</h3>
+      <p>Searchable PDF with invisible text overlay for Cmd+F search, Word DOCX with structure, plain UTF-8 TXT, and a full audit JSON with word coordinates.</p>
+      <span class="feature-tag">PDF · DOCX · TXT · JSON</span>
+    </div>
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+      <h3>PWA &amp; Offline Support</h3>
+      <p>Installs as a native-like app on any device. Service Worker cache-first architecture means it works fully without an internet connection after the first load.</p>
+      <span class="feature-tag">Works offline</span>
+    </div>
+    <div class="feature-card fade-up">
+      <div class="feature-icon icon-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <h3>Confidence Bounding Boxes</h3>
+      <p>Every recognized word is overlaid with a color-coded box — green (high), amber (medium), red (low) — so you instantly know what to review.</p>
+      <span class="feature-tag">Word-level confidence</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ENGINE COMPARISON -->
+<section class="section">
+  <p class="section-label fade-up">OCR Engines</p>
+  <h2 class="section-title fade-up">Choose your processing mode</h2>
+  <p class="section-subtitle fade-up">Both engines produce verbatim transcription — zero translation, zero transliteration.</p>
+  <div class="engine-cards">
+    <div class="engine-card fade-up">
+      <div class="engine-badge on-device"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> On-Device WASM</div>
+      <h3>Tesseract.js v5</h3>
+      <div class="engine-speed">~8 s <small>/ page</small></div>
+      <p>Runs entirely inside your browser via WebAssembly. No API key needed. Fully offline once loaded.</p>
+      <ul class="engine-pros">
+        <li>Absolute privacy — zero network requests</li>
+        <li>Works offline after first visit</li>
+        <li>No API key or account required</li>
+        <li>Supports all 13 Indian scripts</li>
+      </ul>
+    </div>
+    <div class="engine-card recommended fade-up">
+      <span class="rec-badge">Recommended</span>
+      <div class="engine-badge ai"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Gemini AI Fast Mode</div>
+      <h3>Google Gemini Flash / Pro</h3>
+      <div class="engine-speed">~1 s <small>/ page</small></div>
+      <p>Multimodal AI transcription via the Gemini API. 8× faster than WASM with superior accuracy on poor or handwritten scans.</p>
+      <ul class="engine-pros">
+        <li>~1 second per page throughput</li>
+        <li>Superior accuracy on degraded scans</li>
+        <li>Handles mixed-script documents</li>
+        <li>Free tier available with a Gemini API key</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- LANGUAGES -->
+<section id="languages" class="section">
+  <p class="section-label fade-up">Language Support</p>
+  <h2 class="section-title fade-up">13 scripts, fully supported</h2>
+  <p class="section-subtitle fade-up">Strict verbatim transcription — the exact script and language of the original document, always preserved.</p>
+  <div class="lang-grid">
+    <div class="lang-card fade-up"><span class="lang-native">हिन्दी</span><div class="lang-name">Hindi</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">मराठी</span><div class="lang-name">Marathi</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">தமிழ்</span><div class="lang-name">Tamil</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">తెలుగు</span><div class="lang-name">Telugu</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">বাংলা</span><div class="lang-name">Bengali</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">ગુજરાતી</span><div class="lang-name">Gujarati</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">ಕನ್ನಡ</span><div class="lang-name">Kannada</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">മലയാളം</span><div class="lang-name">Malayalam</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">ਪੰਜਾਬੀ</span><div class="lang-name">Punjabi</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">ଓଡ଼ିଆ</span><div class="lang-name">Odia</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">संस्कृत</span><div class="lang-name">Sanskrit</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">اردو</span><div class="lang-name">Urdu</div></div>
+    <div class="lang-card fade-up"><span class="lang-native">English</span><div class="lang-name">English</div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- EXPORT FORMATS -->
+<section class="section" style="padding-top:64px;padding-bottom:64px;">
+  <p class="section-label fade-up">Export</p>
+  <h2 class="section-title fade-up">Four professional export formats</h2>
+  <div class="export-row">
+    <div class="export-card fade-up"><div class="fmt-badge fmt-pdf">PDF</div><div class="export-info"><h4>Searchable PDF</h4><p>100% transparent text overlay on the original image. Press Cmd+F to search without visual artifacts.</p></div></div>
+    <div class="export-card fade-up"><div class="fmt-badge fmt-docx">DOCX</div><div class="export-info"><h4>Word Document</h4><p>Structured headings, paragraphs, and page breaks. Edit directly in Microsoft Word or Google Docs.</p></div></div>
+    <div class="export-card fade-up"><div class="fmt-badge fmt-txt">TXT</div><div class="export-info"><h4>Plain Text</h4><p>Clean UTF-8 output with page dividers. Perfect for translation, NLP pipelines, or copy-paste workflows.</p></div></div>
+    <div class="export-card fade-up"><div class="fmt-badge fmt-json">JSON</div><div class="export-info"><h4>Canonical JSON</h4><p>Full audit trail with word coordinates, reading order, confidence scores, and page metadata.</p></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRIVACY -->
+<section id="privacy" class="section">
+  <div class="privacy-box fade-up">
+    <div>
+      <p class="section-label" style="margin-bottom:10px;">Privacy First</p>
+      <h2>Your documents stay<br>on your device</h2>
+      <p>In on-device mode, OCR Studio processes everything inside your browser's sandbox. No telemetry, no analytics SDK, no cloud storage. There is no server that could receive your files.</p>
+      <p>When you opt into Gemini AI mode, only the page image is sent to the Gemini API using your own API key — subject to Google's standard data policy.</p>
+      <a href="index.html" class="btn-primary-lg" style="display:inline-flex;margin-top:8px;">Start processing documents</a>
+    </div>
+    <div class="privacy-stats">
+      <div class="privacy-stat"><div class="stat-value">0</div><div class="stat-label">Bytes transmitted<br>in on-device mode</div></div>
+      <div class="privacy-stat"><div class="stat-value">13</div><div class="stat-label">Indian scripts<br>supported</div></div>
+      <div class="privacy-stat"><div class="stat-value">~1s</div><div class="stat-label">Per page with<br>Gemini AI mode</div></div>
+      <div class="privacy-stat"><div class="stat-value">4</div><div class="stat-label">Export formats<br>available</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <h2 class="fade-up">Ready to extract text<br>from your documents?</h2>
+    <p class="fade-up">No account. No upload. Works in any modern browser. Free and open source.</p>
+    <div class="hero-actions fade-up">
+      <a href="index.html" class="btn-primary-lg"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Open OCR Studio</a>
+      <a href="https://github.com" target="_blank" rel="noopener" class="btn-secondary-lg"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    IndicOCR Studio v2
+  </div>
+  <div class="footer-links">
+    <a href="index.html">App</a>
+    <a href="#features">Features</a>
+    <a href="#languages">Languages</a>
+    <a href="#privacy">Privacy</a>
+  </div>
+  <div class="footer-copy">MIT License &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; No cookies</div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -36px 0px' });
+  document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

@@ -108,7 +108,13 @@ window.OCRStudio = window.OCRStudio || {};
     loadGeminiSettings();
     updateNavAIStatus();
 
-    // Check for resumable sessions
+    // Wire landing page CTA buttons
+    wireLandingCTAs();
+
+    // Show landing page by default
+    showLanding();
+
+    // Check for resumable sessions (only relevant when going straight to app)
     await checkForResumableSessions();
 
     // Wire events
@@ -593,6 +599,7 @@ window.OCRStudio = window.OCRStudio || {};
     uploadZone.classList.add('hidden');
     reviewStudio.classList.remove('hidden');
     reviewStudio.classList.add('active');
+    hideLandingPage();
   }
 
   function showUploadZone() {
@@ -603,6 +610,58 @@ window.OCRStudio = window.OCRStudio || {};
     dropArea.classList.remove('hidden');
     preflightPanel.classList.add('hidden');
     state.currentFile = null;
+    hideLandingPage();
+  }
+
+  // ── Landing Page ──────────────────────────────────────────────────────────
+
+  const landingPage = document.getElementById('landing-page');
+
+  function hideLandingPage() {
+    if (!landingPage) return;
+    landingPage.classList.remove('active');
+  }
+
+  function showLanding() {
+    if (!landingPage) return;
+    // Hide other views
+    uploadZone.classList.remove('active');
+    uploadZone.classList.add('hidden');
+    reviewStudio.classList.remove('active');
+    reviewStudio.classList.add('hidden');
+    landingPage.classList.add('active');
+    // Scroll landing back to top
+    landingPage.scrollTop = 0;
+    // Wire scroll animations (idempotent)
+    initLandingAnimations();
+  }
+
+  function initLandingAnimations() {
+    if (landingPage._animationsWired) return;
+    landingPage._animationsWired = true;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('lp-visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+    landingPage.querySelectorAll('.lp-fade').forEach(el => io.observe(el));
+  }
+
+  function wireLandingCTAs() {
+    // "Try OCR Studio Free" hero CTA
+    document.getElementById('lp-btn-open-app')?.addEventListener('click', () => {
+      showUploadZone();
+    });
+    // "See how it works" scrolls down within landing
+    document.getElementById('lp-btn-learn-more')?.addEventListener('click', () => {
+      document.getElementById('lp-how')?.scrollIntoView({ behavior: 'smooth' });
+    });
+    // Privacy section CTA + bottom CTA
+    landingPage?.querySelectorAll('.lp-btn-cta-privacy, .lp-btn-cta-bottom').forEach(btn => {
+      btn.addEventListener('click', () => {
+        showUploadZone();
+      });
+    });
   }
 
   // ─── Settings ─────────────────────────────────────────────────────────────
@@ -734,7 +793,7 @@ window.OCRStudio = window.OCRStudio || {};
     // ── Brand / Home ────────────────────────────────────────────────────────
     btnHome?.addEventListener('click', () => {
       cancelAutoProceed();
-      showUploadZone();
+      showLanding();
     });
 
     // ── Samples Nav Popup ───────────────────────────────────────────────────

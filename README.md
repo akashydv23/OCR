@@ -1,4 +1,4 @@
-# OCR Studio
+# IndicOCR Studio v2
 
 > **Zero-Server, Browser-Native OCR Platform for Indian Regional Languages & Multilingual Documents**
 
