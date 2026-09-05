@@ -88,6 +88,12 @@ Open `http://localhost:8081` in your browser.
 
 ---
 
+## 👨‍💻 Author & Maintainer
+
+Crafted with ❤️ by **Akash Yadav**
+
+---
+
 ## 📄 License
 
 MIT License. Open-source and free for commercial and personal use.
