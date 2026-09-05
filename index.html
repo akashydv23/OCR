@@ -31,7 +31,7 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=26.0">
+  <link rel="stylesheet" href="css/styles.css?v=27.0">
 
   <!-- ============================================================
        CDN LIBRARIES (UMD/IIFE builds — load before app modules)
@@ -950,7 +950,23 @@
     </section>
 
     <!-- ── Review Studio ──────────────────────────────────────────── -->
-    <section id="review-studio" class="hidden">
+    <section id="review-studio" class="hidden mobile-view-text">
+
+      <!-- Mobile View Switcher Tabs (Visible only on mobile screens <= 768px) -->
+      <div id="mobile-view-tabs" class="mobile-view-tabs">
+        <button id="btn-tab-scan" class="mobile-tab-btn" data-view="scan" type="button">
+          <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Scan Image</span>
+        </button>
+        <button id="btn-tab-text" class="mobile-tab-btn active" data-view="text" type="button">
+          <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Extracted Text</span>
+        </button>
+        <button id="btn-tab-split" class="mobile-tab-btn" data-view="split" type="button">
+          <svg class="ui-icon ui-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+          <span>Split</span>
+        </button>
+      </div>
 
       <!-- Left: Scan Canvas Pane -->
       <div id="scan-pane">
@@ -1253,15 +1269,15 @@
   </div>
 
   <!-- UI Components -->
-  <script src="js/components/JobProgress.js?v=26.0"></script>
-  <script src="js/components/ReviewStudio.js?v=26.0"></script>
-  <script src="js/components/UserGuideModal.js?v=26.0"></script>
+  <script src="js/components/JobProgress.js?v=27.0"></script>
+  <script src="js/components/ReviewStudio.js?v=27.0"></script>
+  <script src="js/components/UserGuideModal.js?v=27.0"></script>
 
   <!-- Automated Test Suite -->
-  <script src="tests/test-suite.js?v=26.0"></script>
+  <script src="tests/test-suite.js?v=27.0"></script>
 
   <!-- Main application controller (must load last) -->
-  <script type="module" src="js/app.js?v=26.0"></script>
+  <script type="module" src="js/app.js?v=27.0"></script>
 
   <!-- ============================================================
        UI WIRING (Export Dropdown & Test Modal)

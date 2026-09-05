@@ -6,7 +6,7 @@
 
 'use strict';
 
-const CACHE_VERSION = 'indicocr-v2-26.0.0';
+const CACHE_VERSION = 'indicocr-v2-27.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
 

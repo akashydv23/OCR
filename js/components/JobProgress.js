@@ -239,6 +239,13 @@ window.OCRStudio.JobProgress = (function () {
       _dom.btnPauseResume.onclick = function () { hide(); };
     }
     if (_dom.btnCancel) _dom.btnCancel.style.display = 'none';
+
+    // Auto-dismiss completed widget after 3.2s so it does not block the document view
+    setTimeout(function () {
+      if (_dom.widget && !_dom.widget.classList.contains('hidden')) {
+        hide();
+      }
+    }, 3200);
   }
 
   function pause() {

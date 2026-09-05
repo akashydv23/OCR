@@ -34,6 +34,8 @@ window.OCRStudio.ReviewStudio = (function () {
 
   var _handToolActive = false;
   var _spacePanning   = false;
+  var _mobileView     = 'text'; // 'scan' | 'text' | 'split'
+  var _fitMode        = 'width'; // 'width' | 'page'
 
   var _bboxMode = (function () {
     try {
@@ -76,7 +78,7 @@ window.OCRStudio.ReviewStudio = (function () {
     if (oldIndicator) oldIndicator.remove();
   }
 
-  function _fitPage() {
+  function _fitPage(forceMode) {
     var viewport = el('scan-viewport');
     var canvas   = el('scan-canvas');
     if (!viewport || !canvas) return;
@@ -85,10 +87,24 @@ window.OCRStudio.ReviewStudio = (function () {
     var iw = canvas.width;
     var ih = canvas.height;
     if (!iw || !ih) return;
-    var fitScale = Math.min(vw / iw, vh / ih) * 0.92;
-    _zoomState.scale     = fitScale;
-    _panState.translateX = (vw - iw * fitScale) / 2;
-    _panState.translateY = (vh - ih * fitScale) / 2;
+
+    var isMobile = window.innerWidth <= 768;
+    var mode = forceMode || (isMobile ? _fitMode : 'page');
+
+    var fitScale;
+    if (mode === 'width' && vw > 0 && iw > 0) {
+      // Fit to width: scales to fill phone width and aligns top
+      fitScale = (vw / iw) * 0.96;
+      _zoomState.scale     = clamp(fitScale, 0.15, 5.0);
+      _panState.translateX = (vw - iw * _zoomState.scale) / 2;
+      _panState.translateY = 8;
+    } else {
+      // Fit entire page in viewport
+      fitScale = Math.min(vw / iw, vh / ih) * 0.92;
+      _zoomState.scale     = clamp(fitScale, 0.15, 5.0);
+      _panState.translateX = (vw - iw * _zoomState.scale) / 2;
+      _panState.translateY = (vh - ih * _zoomState.scale) / 2;
+    }
     _syncPanZoom();
   }
 
@@ -118,6 +134,92 @@ window.OCRStudio.ReviewStudio = (function () {
       _panState.isPanning   = false;
       viewport.style.cursor = _handToolActive ? 'grab' : '';
     });
+
+    // ── Touch pinch-to-zoom & touch drag for mobile ──
+    var _touchState = {
+      isTracking: false,
+      initialDist: 0,
+      initialScale: 1,
+      lastX: 0,
+      lastY: 0,
+      touchCount: 0
+    };
+
+    function _getTouchDist(t1, t2) {
+      var dx = t1.clientX - t2.clientX;
+      var dy = t1.clientY - t2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    viewport.addEventListener('touchstart', function (e) {
+      if (e.target.closest && (e.target.closest('.bbox-rect') || e.target.closest('.bbox-word-hitbox'))) {
+        return;
+      }
+      if (e.touches.length === 1) {
+        _touchState.isTracking = true;
+        _touchState.touchCount = 1;
+        _touchState.lastX = e.touches[0].clientX;
+        _touchState.lastY = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        _touchState.isTracking = true;
+        _touchState.touchCount = 2;
+        _touchState.initialDist = _getTouchDist(e.touches[0], e.touches[1]);
+        _touchState.initialScale = _zoomState.scale;
+        _touchState.lastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        _touchState.lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', function (e) {
+      if (!_touchState.isTracking) return;
+
+      if (e.touches.length === 1 && _touchState.touchCount === 1) {
+        var curX = e.touches[0].clientX;
+        var curY = e.touches[0].clientY;
+        var dx = curX - _touchState.lastX;
+        var dy = curY - _touchState.lastY;
+        _touchState.lastX = curX;
+        _touchState.lastY = curY;
+
+        _panState.translateX += dx;
+        _panState.translateY += dy;
+        _syncPanZoom();
+        if (e.cancelable) e.preventDefault();
+      } else if (e.touches.length === 2) {
+        var curDist = _getTouchDist(e.touches[0], e.touches[1]);
+        if (_touchState.initialDist > 0) {
+          var ratio = curDist / _touchState.initialDist;
+          var newScale = clamp(_touchState.initialScale * ratio, 0.15, 5.0);
+
+          var rect = viewport.getBoundingClientRect();
+          var midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          var midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+          var oldScale = _zoomState.scale;
+          _panState.translateX = midX - (midX - _panState.translateX) * (newScale / oldScale);
+          _panState.translateY = midY - (midY - _panState.translateY) * (newScale / oldScale);
+          _zoomState.scale = newScale;
+          _syncPanZoom();
+        }
+        if (e.cancelable) e.preventDefault();
+      }
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', function (e) {
+      if (e.touches.length === 0) {
+        _touchState.isTracking = false;
+        _touchState.touchCount = 0;
+      } else if (e.touches.length === 1) {
+        _touchState.touchCount = 1;
+        _touchState.lastX = e.touches[0].clientX;
+        _touchState.lastY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchcancel', function () {
+      _touchState.isTracking = false;
+      _touchState.touchCount = 0;
+    }, { passive: true });
 
     viewport.addEventListener('wheel', function (e) {
       e.preventDefault();
@@ -186,7 +288,12 @@ window.OCRStudio.ReviewStudio = (function () {
     }
 
     var btnFit = el('btn-fit-page');
-    if (btnFit) btnFit.addEventListener('click', _fitPage);
+    if (btnFit) {
+      btnFit.addEventListener('click', function () {
+        _fitMode = (_fitMode === 'width') ? 'page' : 'width';
+        _fitPage(_fitMode);
+      });
+    }
 
     var btnZoomIn  = el('btn-zoom-in');
     var btnZoomOut = el('btn-zoom-out');
@@ -201,6 +308,36 @@ window.OCRStudio.ReviewStudio = (function () {
       });
     }
 
+  }
+
+  function setMobileView(view) {
+    _mobileView = view;
+    var studio = el('review-studio');
+    if (!studio) return;
+
+    studio.classList.remove('mobile-view-scan', 'mobile-view-text', 'mobile-view-split');
+    studio.classList.add('mobile-view-' + view);
+
+    var tabs = document.querySelectorAll('.mobile-tab-btn');
+    tabs.forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.view === view);
+    });
+
+    if (view === 'scan' || view === 'split') {
+      setTimeout(function () {
+        _fitPage('width');
+      }, 60);
+    }
+  }
+
+  function _wireMobileTabs() {
+    var tabs = document.querySelectorAll('.mobile-tab-btn');
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var view = tab.dataset.view;
+        setMobileView(view);
+      });
+    });
   }
 
   function _updateBBoxButtonUI() {
@@ -649,6 +786,10 @@ window.OCRStudio.ReviewStudio = (function () {
     // Render canvas with page image immediately so user sees their document
     if (blob) {
       _renderCanvas(blob);
+    }
+
+    if (window.innerWidth <= 768) {
+      setMobileView('scan');
     }
 
     var viewport = el('scan-viewport');
@@ -1103,6 +1244,10 @@ window.OCRStudio.ReviewStudio = (function () {
       _wireDiffDrawerButtons();
       _wireGuidancePopup();
       _updateBBoxButtonUI();
+      _wireMobileTabs();
+      if (window.innerWidth <= 768) {
+        setMobileView(_mobileView || 'text');
+      }
       _updateBadges(null);
       _updatePageIndicator();
     },
@@ -1142,6 +1287,10 @@ window.OCRStudio.ReviewStudio = (function () {
       _renderDiffDrawer(pageData);
       _updateBadges(pageData);
       _updatePageIndicator();
+
+      if (window.innerWidth <= 768) {
+        _fitPage('width');
+      }
     },
 
     showInitialProcessing: showInitialProcessing,
@@ -1240,7 +1389,9 @@ window.OCRStudio.ReviewStudio = (function () {
 
     toggleBBoxMode: function (mode) { toggleBBoxMode(mode); },
     setBBoxMode:    function (mode) { toggleBBoxMode(mode); },
-    getBBoxMode:    function () { return _bboxMode; }
+    getBBoxMode:    function () { return _bboxMode; },
+    setMobileView:  function (view) { setMobileView(view); },
+    getMobileView:  function () { return _mobileView; }
 
   };
 
