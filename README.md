@@ -1,8 +1,19 @@
-# OCR Studio
+# 📄 OCR Studio
 
 > **Zero-Server, Browser-Native OCR Platform for Indian Regional Languages & Multilingual Documents**
 
-OCR Studio is a modern, high-performance web application that performs Optical Character Recognition (OCR), document layout reconstruction, and orthographic validation directly inside the web browser.
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-ocrstudio.pages.dev-blue?style=for-the-badge&logo=cloudflare)](https://ocrstudio.pages.dev)
+[![GitHub](https://img.shields.io/badge/GitHub-akashydv23%2FOCR-black?style=for-the-badge&logo=github)](https://github.com/akashydv23/OCR)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+---
+
+### 🌐 **Live Website Link:** [https://ocrstudio.pages.dev](https://ocrstudio.pages.dev)
+
+> **📌 Note for Evaluators / Reviewers:**  
+> The live production application is deployed and hosted on **Cloudflare Pages** at:  
+> 👉 **[https://ocrstudio.pages.dev](https://ocrstudio.pages.dev)**  
+> You can test document scanning, multi-language OCR, parallel multi-page processing, and DOCX/PDF export live directly in your browser without any setup!
 
 ---
 
@@ -28,9 +39,12 @@ OCR Studio is a modern, high-performance web application that performs Optical C
 
 ---
 
-## 🚀 Live Demo / GitHub Pages Deployment
+## 🚀 Live Demo & Deployment
 
-This project is built with vanilla web technologies (HTML5, CSS3, ES6 JavaScript) and has **no build step** or backend server requirements. It runs seamlessly on **GitHub Pages**.
+- **Live Production URL (Cloudflare Pages):** **[https://ocrstudio.pages.dev](https://ocrstudio.pages.dev)**
+- **GitHub Repository:** **[https://github.com/akashydv23/OCR](https://github.com/akashydv23/OCR)**
+
+This project is built with vanilla web technologies (HTML5, CSS3, ES6 JavaScript) and has **no build step** or backend server requirements. It can be deployed in seconds to **Cloudflare Pages**, **GitHub Pages**, or Vercel.
 
 ### Deploying to GitHub Pages:
 
