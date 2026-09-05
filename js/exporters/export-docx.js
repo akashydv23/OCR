@@ -41,6 +41,44 @@ window.OCRStudio.ExportDOCX = (function () {
   }
 
   /**
+   * Ensures the docx library is loaded into window.docx.
+   * If not already available, dynamically injects fallback script tags.
+   * @returns {Promise<boolean>} True if window.docx is ready
+   */
+  async function ensureDocxLoaded() {
+    if (typeof window.docx !== 'undefined' && window.docx.Document && window.docx.Packer) {
+      return true;
+    }
+
+    var fallbackUrls = [
+      'https://unpkg.com/docx@9.7.1/dist/index.umd.cjs',
+      'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js'
+    ];
+
+    for (var i = 0; i < fallbackUrls.length; i++) {
+      var url = fallbackUrls[i];
+      try {
+        await new Promise(function (resolve, reject) {
+          var script = document.createElement('script');
+          script.src = url;
+          script.async = true;
+          script.onload = function () { resolve(); };
+          script.onerror = function (e) { reject(e); };
+          document.head.appendChild(script);
+        });
+
+        if (typeof window.docx !== 'undefined' && window.docx.Document && window.docx.Packer) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[ExportDOCX] Fallback CDN failed for', url, err);
+      }
+    }
+
+    return typeof window.docx !== 'undefined' && window.docx.Document && window.docx.Packer;
+  }
+
+  /**
    * Export a canonical document as a Microsoft Word .docx file.
    *
    * @param {Object}        doc         - Full canonical document object.
@@ -48,8 +86,9 @@ window.OCRStudio.ExportDOCX = (function () {
    * @returns {Promise<void>} Triggers a browser file download on success.
    */
   async function exportDOCX(doc, getPageBlob) {
-    if (typeof docx === 'undefined' || !docx.Document || !docx.Packer) {
-      var notLoadedMsg = 'The Word (.docx) export library is still loading or could not be loaded. Please check your network connection and refresh the page.';
+    var isReady = await ensureDocxLoaded();
+    if (!isReady) {
+      var notLoadedMsg = 'The Word (.docx) export library could not be loaded. Please check your network connection and refresh the page.';
       console.error('[ExportDOCX]', notLoadedMsg);
       if (typeof alert === 'function') {
         alert(notLoadedMsg);
@@ -58,11 +97,11 @@ window.OCRStudio.ExportDOCX = (function () {
     }
 
     // Destructure needed constructors from the docx global namespace
-    var Document     = docx.Document;
-    var Packer       = docx.Packer;
-    var Paragraph    = docx.Paragraph;
-    var TextRun      = docx.TextRun;
-    var PageBreak    = docx.PageBreak;
+    var Document     = window.docx.Document;
+    var Packer       = window.docx.Packer;
+    var Paragraph    = window.docx.Paragraph;
+    var TextRun      = window.docx.TextRun;
+    var PageBreak    = window.docx.PageBreak;
     var HeadingLevel = docx.HeadingLevel;
 
     try {

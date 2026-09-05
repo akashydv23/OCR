@@ -79,14 +79,18 @@ window.OCRStudio.ExportSearchablePDF = (function () {
         '/CIDInit /ProcSet findresource begin\n' +
         '12 dict begin\n' +
         'begincmap\n' +
-        '/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def\n' +
+        '/CIDSystemInfo <<\n' +
+        '  /Registry (Adobe)\n' +
+        '  /Ordering (Identity)\n' +
+        '  /Supplement 0\n' +
+        '>> def\n' +
         '/CMapName /Identity-ToUnicode def\n' +
         '/CMapType 2 def\n' +
         '1 begincodespacerange\n' +
         '<0000> <FFFF>\n' +
         'endcodespacerange\n' +
         '1 beginbfrange\n' +
-        '<0000> <FFFF> <0000>\n' +
+        '<0001> <FFFF> <0001>\n' +
         'endbfrange\n' +
         'endcmap\n' +
         'CMapName currentdict /CMap defineresource pop\n' +
@@ -96,8 +100,8 @@ window.OCRStudio.ExportSearchablePDF = (function () {
       var toUnicodeRef = pdfDoc.context.register(pdfDoc.context.flateStream(toUnicodeCMap));
 
       var fontDescRef = pdfDoc.context.register(pdfDoc.context.obj({
-        Type:        'FontDescriptor',
-        FontName:    'InvisibleOCR',
+        Type:        PDFName.of('FontDescriptor'),
+        FontName:    PDFName.of('InvisibleOCR'),
         Flags:       4,
         FontBBox:    [0, 0, 1000, 1000],
         ItalicAngle: 0,
@@ -108,9 +112,9 @@ window.OCRStudio.ExportSearchablePDF = (function () {
       }));
 
       var cidFontRef = pdfDoc.context.register(pdfDoc.context.obj({
-        Type:          'Font',
-        Subtype:       'CIDFontType2',
-        BaseFont:      'InvisibleOCR',
+        Type:          PDFName.of('Font'),
+        Subtype:       PDFName.of('CIDFontType2'),
+        BaseFont:      PDFName.of('InvisibleOCR'),
         CIDSystemInfo: {
           Registry:   PDFString.of('Adobe'),
           Ordering:   PDFString.of('Identity'),
@@ -118,14 +122,14 @@ window.OCRStudio.ExportSearchablePDF = (function () {
         },
         FontDescriptor: fontDescRef,
         DW:             600,
-        CIDToGIDMap:    'Identity'
+        CIDToGIDMap:    PDFName.of('Identity')
       }));
 
       var type0FontRef = pdfDoc.context.register(pdfDoc.context.obj({
-        Type:            'Font',
-        Subtype:         'Type0',
-        BaseFont:        'InvisibleOCR',
-        Encoding:        'Identity-H',
+        Type:            PDFName.of('Font'),
+        Subtype:         PDFName.of('Type0'),
+        BaseFont:        PDFName.of('InvisibleOCR'),
+        Encoding:        PDFName.of('Identity-H'),
         DescendantFonts: [cidFontRef],
         ToUnicode:       toUnicodeRef
       }));
@@ -183,14 +187,19 @@ window.OCRStudio.ExportSearchablePDF = (function () {
         }
 
         // ── Attach Invisible Font to Page Resources ──────────────────────
-        if (!pdfPage.node.Resources()) {
-          pdfPage.node.set(PDFName.of('Resources'), pdfDoc.context.obj({}));
+        var resourcesRef = pdfPage.node.get(PDFName.of('Resources'));
+        var res = resourcesRef ? pdfDoc.context.lookup(resourcesRef) : null;
+        if (!res) {
+          res = pdfDoc.context.obj({});
+          pdfPage.node.set(PDFName.of('Resources'), res);
         }
-        var res = pdfPage.node.Resources();
-        if (!res.has(PDFName.of('Font'))) {
-          res.set(PDFName.of('Font'), pdfDoc.context.obj({}));
+        var fontDictRef = res.get(PDFName.of('Font'));
+        var fontDict = fontDictRef ? pdfDoc.context.lookup(fontDictRef) : null;
+        if (!fontDict) {
+          fontDict = pdfDoc.context.obj({});
+          res.set(PDFName.of('Font'), fontDict);
         }
-        res.lookup(PDFName.of('Font')).set(fontResourceName, type0FontRef);
+        fontDict.set(fontResourceName, type0FontRef);
 
         // ── Invisible text layer ─────────────────────────────────────────
         // Sort blocks by reading_order so text extraction order is logical
@@ -237,6 +246,10 @@ window.OCRStudio.ExportSearchablePDF = (function () {
               var code = wordText.charCodeAt(ci).toString(16).toUpperCase();
               while (code.length < 4) code = '0' + code;
               hex += code;
+            }
+            // Append space character (U+0020) between words so multi-word search works
+            if (wi < words.length - 1) {
+              hex += '0020';
             }
 
             // Calculate horizontal scaling (Tz) so the text spans the word bounding box

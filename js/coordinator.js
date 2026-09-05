@@ -33,12 +33,14 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
   /**
    * @param {string} language - Tesseract language string, e.g. 'hin+eng'
    * @param {string} sessionId - Session ID for DB persistence
+   * @param {number} [poolSize=2] - Number of concurrent workers for on-device OCR
    */
-  constructor(language, sessionId) {
+  constructor(language, sessionId, poolSize = 2) {
     this.language = language;
     this.sessionId = sessionId;
-    this._worker = null;
-    this._workerReady = false;
+    this._poolSize = Math.max(1, Math.min(poolSize || 2, 3));
+    this._workers = []; // Array of { id, worker, inUse: boolean, ready: boolean }
+    this._workerWaitQueue = [];
     this._workerInitPromise = null;
 
     // Callbacks
@@ -48,8 +50,36 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
   }
 
   /**
-   * Initialize Tesseract worker (called once per session).
-   * The worker is reused across all pages to avoid re-initialization overhead.
+   * Spawns a single Tesseract worker.
+   * @param {number} workerId
+   * @returns {Promise<{ id: number, worker: Object, inUse: boolean, ready: boolean }>}
+   */
+  async _createSingleWorker(workerId) {
+    const effectiveLang = (this.language && this.language !== 'auto') ? this.language : 'hin+eng';
+    console.log(`[Coordinator] Spawning Tesseract worker #${workerId} for language: ${effectiveLang}`);
+
+    const worker = await Tesseract.createWorker(
+      effectiveLang,
+      1, // OEM: 1 = LSTM only (best for Indic scripts)
+      {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            this._onTesseractProgress?.(m.progress);
+          }
+        },
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      }
+    );
+
+    return { id: workerId, worker, inUse: false, ready: true };
+  }
+
+  /**
+   * Initialize Tesseract workers in parallel.
+   * Worker 0 is initialized first so Page 1 begins instantly.
+   * Additional workers are spawned in parallel to accelerate subsequent pages.
    */
   async initWorker() {
     if (this._workerInitPromise) {
@@ -57,30 +87,68 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
     }
 
     this._workerInitPromise = (async () => {
-      const effectiveLang = (this.language && this.language !== 'auto') ? this.language : 'hin+eng';
-      console.log(`[Coordinator] Initializing Tesseract worker for language: ${effectiveLang}`);
+      // Primary worker (worker #0) initializes immediately
+      const w0 = await this._createSingleWorker(0);
+      this._workers.push(w0);
+      console.log('[Coordinator] Primary Tesseract worker #0 ready');
 
-      this._worker = await Tesseract.createWorker(
-        effectiveLang,
-        1, // OEM: 1 = LSTM only (best for Indic scripts)
-        {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              // Progress events during active recognition
-              this._onTesseractProgress?.(m.progress);
+      // Lazily spawn Worker #1 in background if pool size > 1
+      if (this._poolSize > 1) {
+        this._createSingleWorker(1)
+          .then((w1) => {
+            this._workers.push(w1);
+            console.log('[Coordinator] Secondary Tesseract worker #1 ready (Parallel mode active)');
+            // If any page is waiting in the queue, assign to w1 immediately
+            if (this._workerWaitQueue.length > 0) {
+              const next = this._workerWaitQueue.shift();
+              w1.inUse = true;
+              next(w1);
             }
-          },
-          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-          corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
-          langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-        }
-      );
-
-      this._workerReady = true;
-      console.log('[Coordinator] Tesseract worker ready');
+          })
+          .catch((err) => {
+            console.warn('[Coordinator] Secondary worker spawn failed (continuing with single worker):', err);
+          });
+      }
     })();
 
     return this._workerInitPromise;
+  }
+
+  /**
+   * Acquire an idle worker from the worker pool.
+   * If all workers are busy, returns a Promise that resolves as soon as one is released.
+   * @returns {Promise<{ id: number, worker: Object, inUse: boolean, ready: boolean }>}
+   */
+  async acquireWorker() {
+    await this.initWorker();
+
+    for (const w of this._workers) {
+      if (w.ready && !w.inUse) {
+        w.inUse = true;
+        return w;
+      }
+    }
+
+    // All active workers are busy, enqueue and wait
+    return new Promise((resolve) => {
+      this._workerWaitQueue.push(resolve);
+    });
+  }
+
+  /**
+   * Release a worker back to the pool or pass it to the next waiting page.
+   * @param {Object} workerObj
+   */
+  releaseWorker(workerObj) {
+    if (!workerObj) return;
+
+    if (this._workerWaitQueue.length > 0) {
+      const nextResolve = this._workerWaitQueue.shift();
+      workerObj.inUse = true;
+      nextResolve(workerObj);
+    } else {
+      workerObj.inUse = false;
+    }
   }
 
   /**
@@ -119,10 +187,6 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
       }
     }
 
-    if (!this._workerReady) {
-      await this.initWorker();
-    }
-
     // Initialize canonical page object
     const canonicalPage = window.OCRStudio.CanonicalDoc.createPage(
       pageNum, pageWidth, pageHeight, dpi
@@ -156,9 +220,11 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
     // ─── Stage 2: OCR Recognition ─────────────────────────────────────────────
     let words = [];
     let rawBlocks = [];
+    let workerObj = null;
 
     try {
-      const { data } = await this._worker.recognize(processedCanvas);
+      workerObj = await this.acquireWorker();
+      const { data } = await workerObj.worker.recognize(processedCanvas);
 
       // Normalize words from Tesseract output
       words = (data.words || []).map((w, idx) => ({
@@ -180,6 +246,10 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
       this.onError?.(pageNum, 'ocr', err);
       canonicalPage.needs_review = true;
       canonicalPage.review_flags.push({ type: 'ocr_failure', description: err.message });
+    } finally {
+      if (workerObj) {
+        this.releaseWorker(workerObj);
+      }
     }
 
     // ─── Stage 3: Layout Detection ────────────────────────────────────────────
@@ -408,16 +478,20 @@ window.OCRStudio.PipelineCoordinator = class PipelineCoordinator {
   }
 
   /**
-   * Terminate the Tesseract worker. Call when the session is complete.
+   * Terminate all Tesseract workers. Call when the session is complete.
    */
   async terminateWorker() {
-    if (this._worker) {
-      await this._worker.terminate();
-      this._worker = null;
-      this._workerReady = false;
-      this._workerInitPromise = null;
-      console.log('[Coordinator] Tesseract worker terminated');
+    for (const item of this._workers) {
+      try {
+        await item.worker.terminate();
+      } catch (e) {
+        /* ignore */
+      }
     }
+    this._workers = [];
+    this._workerWaitQueue = [];
+    this._workerInitPromise = null;
+    console.log('[Coordinator] All Tesseract workers terminated');
   }
 
   // ─── Private Utilities ────────────────────────────────────────────────────

@@ -35,6 +35,14 @@ window.OCRStudio.ReviewStudio = (function () {
   var _handToolActive = false;
   var _spacePanning   = false;
 
+  var _bboxMode = (function () {
+    try {
+      return localStorage.getItem('indicocr_bbox_mode') || 'clean';
+    } catch (e) {
+      return 'clean';
+    }
+  })();
+
   var _onDiffActionCallback = null;
 
   /* DOM helpers */
@@ -185,6 +193,52 @@ window.OCRStudio.ReviewStudio = (function () {
     if (btnZoomIn)  btnZoomIn.addEventListener('click',  function () { _zoomState.scale = clamp(_zoomState.scale * 1.2, 0.2, 5.0); _syncPanZoom(); });
     if (btnZoomOut) btnZoomOut.addEventListener('click', function () { _zoomState.scale = clamp(_zoomState.scale * 0.83, 0.2, 5.0); _syncPanZoom(); });
 
+    var btnBbox = el('btn-toggle-bbox');
+    if (btnBbox) {
+      _updateBBoxButtonUI();
+      btnBbox.addEventListener('click', function () {
+        toggleBBoxMode();
+      });
+    }
+
+  }
+
+  function _updateBBoxButtonUI() {
+    var btn = el('btn-toggle-bbox');
+    var label = el('bbox-toggle-label');
+    if (!btn) return;
+    if (_bboxMode === 'clean') {
+      if (label) label.textContent = 'Boxes: Clean';
+      btn.classList.add('active');
+      btn.title = 'Bounding Boxes: Clean Blocks (Click for Word Boxes)';
+    } else if (_bboxMode === 'words') {
+      if (label) label.textContent = 'Boxes: Words';
+      btn.classList.add('active');
+      btn.title = 'Bounding Boxes: Word Boxes (Click to Hide)';
+    } else {
+      if (label) label.textContent = 'Boxes: Off';
+      btn.classList.remove('active');
+      btn.title = 'Bounding Boxes: Hidden (Click to Show)';
+    }
+  }
+
+  function toggleBBoxMode(targetMode) {
+    if (targetMode) {
+      _bboxMode = targetMode;
+    } else if (_bboxMode === 'clean') {
+      _bboxMode = 'words';
+    } else if (_bboxMode === 'words') {
+      _bboxMode = 'off';
+    } else {
+      _bboxMode = 'clean';
+    }
+    try {
+      localStorage.setItem('indicocr_bbox_mode', _bboxMode);
+    } catch (e) {}
+    _updateBBoxButtonUI();
+    if (_currentPageData) {
+      _renderBBoxOverlay(_currentPageData);
+    }
   }
 
   /* ── Canvas rendering ── */
@@ -248,30 +302,123 @@ window.OCRStudio.ReviewStudio = (function () {
       svg.setAttribute('height', canvas.height || 0);
     }
 
-    pageData.blocks.forEach(function (block) {
-      if (!block.words) return;
-      block.words.forEach(function (word) {
-        if (!word.bbox) return;
-        var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x',      word.bbox.x || 0);
-        rect.setAttribute('y',      word.bbox.y || 0);
-        rect.setAttribute('width',  word.bbox.w || 0);
-        rect.setAttribute('height', word.bbox.h || 0);
-        rect.setAttribute('rx', '2');
-        var conf      = typeof word.confidence === 'number' ? word.confidence : 1;
-        var confClass = conf >= 0.9 ? 'conf-high' : conf >= 0.75 ? 'conf-mid' : 'conf-low';
-        rect.setAttribute('class', 'bbox-rect ' + confClass);
-        rect.dataset.wordId  = word.word_id  || '';
-        rect.dataset.blockId = block.block_id || '';
-        rect.style.pointerEvents = 'all';
-        rect.addEventListener('click', function (e) {
-          e.stopPropagation();
-          _highlightBBox(word.word_id);
-          _scrollToBlock(block.block_id);
-        });
-        svg.appendChild(rect);
-      });
+    if (_bboxMode === 'off') {
+      svg.style.display = 'none';
+      return;
+    }
+    svg.style.display = 'block';
+
+    var blocks = (pageData.blocks || []).slice().sort(function (a, b) {
+      return (a.reading_order || 0) - (b.reading_order || 0);
     });
+
+    if (_bboxMode === 'clean') {
+      // ── CLEAN MODE: Block-level outlines + reading order badges + interactive word hitboxes ──
+      blocks.forEach(function (block, idx) {
+        var bbox = block.bbox;
+        if (!bbox || !bbox.w || !bbox.h) return;
+
+        var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'bbox-block-group');
+        g.dataset.blockId = block.block_id || '';
+
+        // Block container outline with subtle dashed border
+        var blockRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        blockRect.setAttribute('x', bbox.x);
+        blockRect.setAttribute('y', bbox.y);
+        blockRect.setAttribute('width', bbox.w);
+        blockRect.setAttribute('height', bbox.h);
+        blockRect.setAttribute('rx', '5');
+        blockRect.setAttribute('class', 'bbox-block-rect');
+        blockRect.dataset.blockId = block.block_id || '';
+        g.appendChild(blockRect);
+
+        // Block badge showing reading order (e.g. #1, #2)
+        var badgeH = 18;
+        var badgeText = '#' + ((block.reading_order || idx) + 1);
+        var badgeW = Math.max(26, badgeText.length * 8 + 8);
+        var badgeY = Math.max(2, bbox.y - badgeH - 2);
+
+        var badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        badgeRect.setAttribute('x', bbox.x);
+        badgeRect.setAttribute('y', badgeY);
+        badgeRect.setAttribute('width', badgeW);
+        badgeRect.setAttribute('height', badgeH);
+        badgeRect.setAttribute('rx', '4');
+        badgeRect.setAttribute('class', 'bbox-block-badge');
+        g.appendChild(badgeRect);
+
+        var badgeLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        badgeLabel.setAttribute('x', bbox.x + badgeW / 2);
+        badgeLabel.setAttribute('y', badgeY + 12);
+        badgeLabel.setAttribute('class', 'bbox-block-badge-text');
+        badgeLabel.textContent = badgeText;
+        g.appendChild(badgeLabel);
+
+        // Word hitboxes: transparent by default, hover/selection glow
+        if (block.words) {
+          block.words.forEach(function (word) {
+            if (!word.bbox || !word.bbox.w || !word.bbox.h) return;
+            var wRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            wRect.setAttribute('x', word.bbox.x);
+            wRect.setAttribute('y', word.bbox.y);
+            wRect.setAttribute('width', word.bbox.w);
+            wRect.setAttribute('height', word.bbox.h);
+            wRect.setAttribute('rx', '3');
+            wRect.setAttribute('class', 'bbox-word-hitbox');
+            wRect.dataset.wordId = word.word_id || '';
+            wRect.dataset.blockId = block.block_id || '';
+
+            var conf = typeof word.confidence === 'number' ? (word.confidence > 1 ? word.confidence / 100 : word.confidence) : 1;
+            wRect.setAttribute('title', (word.text || '') + ' (' + Math.round(conf * 100) + '%)');
+
+            wRect.addEventListener('click', function (e) {
+              e.stopPropagation();
+              _highlightBBox(word.word_id);
+              _scrollToBlock(block.block_id);
+            });
+            g.appendChild(wRect);
+          });
+        }
+
+        // Block click selects block
+        g.addEventListener('click', function (e) {
+          if (e.target === blockRect || e.target === badgeRect || e.target === badgeLabel) {
+            _scrollToBlock(block.block_id);
+          }
+        });
+
+        svg.appendChild(g);
+      });
+
+    } else if (_bboxMode === 'words') {
+      // ── WORDS MODE: Refined hairline word-level boxes with confidence colors ──
+      blocks.forEach(function (block) {
+        if (!block.words) return;
+        block.words.forEach(function (word) {
+          if (!word.bbox) return;
+          var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x',      word.bbox.x || 0);
+          rect.setAttribute('y',      word.bbox.y || 0);
+          rect.setAttribute('width',  word.bbox.w || 0);
+          rect.setAttribute('height', word.bbox.h || 0);
+          rect.setAttribute('rx', '2');
+          var conf      = typeof word.confidence === 'number' ? (word.confidence > 1 ? word.confidence / 100 : word.confidence) : 1;
+          var confClass = conf >= 0.85 ? 'conf-high' : conf >= 0.7 ? 'conf-mid' : 'conf-low';
+          rect.setAttribute('class', 'bbox-rect ' + confClass);
+          rect.dataset.wordId  = word.word_id  || '';
+          rect.dataset.blockId = block.block_id || '';
+          rect.style.pointerEvents = 'all';
+          rect.setAttribute('title', (word.text || '') + ' (' + Math.round(conf * 100) + '%)');
+          rect.addEventListener('click', function (e) {
+            e.stopPropagation();
+            _highlightBBox(word.word_id);
+            _scrollToBlock(block.block_id);
+          });
+          svg.appendChild(rect);
+        });
+      });
+    }
   }
 
   /* ── Text Editor ── */
@@ -362,22 +509,30 @@ window.OCRStudio.ReviewStudio = (function () {
   function _highlightBBox(wordId) {
     var svg = el('bbox-overlay');
     if (!svg) return;
-    svg.querySelectorAll('.bbox-rect').forEach(function (r) {
+    svg.querySelectorAll('.bbox-rect, .bbox-word-hitbox').forEach(function (r) {
       r.classList.toggle('bbox-highlighted', r.dataset.wordId === wordId);
     });
   }
 
   function _scrollToBlock(blockId) {
     var editor = el('text-editor');
-    if (!editor) return;
-    editor.querySelectorAll('.text-block').forEach(function (b) {
-      if (b.dataset.blockId === blockId) {
-        b.classList.add('selected');
-        b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      } else {
-        b.classList.remove('selected');
-      }
-    });
+    if (editor) {
+      editor.querySelectorAll('.text-block').forEach(function (b) {
+        if (b.dataset.blockId === blockId) {
+          b.classList.add('selected');
+          b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          b.classList.remove('selected');
+        }
+      });
+    }
+
+    var svg = el('bbox-overlay');
+    if (svg) {
+      svg.querySelectorAll('.bbox-block-group').forEach(function (g) {
+        g.classList.toggle('selected-block', g.dataset.blockId === blockId);
+      });
+    }
   }
 
   function _selectBlock(blockId) {
@@ -947,6 +1102,7 @@ window.OCRStudio.ReviewStudio = (function () {
       _setupPanZoom();
       _wireDiffDrawerButtons();
       _wireGuidancePopup();
+      _updateBBoxButtonUI();
       _updateBadges(null);
       _updatePageIndicator();
     },
@@ -1081,6 +1237,10 @@ window.OCRStudio.ReviewStudio = (function () {
     },
 
     onDiffAction: function (callback) { _onDiffActionCallback = callback; },
+
+    toggleBBoxMode: function (mode) { toggleBBoxMode(mode); },
+    setBBoxMode:    function (mode) { toggleBBoxMode(mode); },
+    getBBoxMode:    function () { return _bboxMode; }
 
   };
 

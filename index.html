@@ -31,7 +31,7 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=23.0">
+  <link rel="stylesheet" href="css/styles.css?v=26.0">
 
   <!-- ============================================================
        CDN LIBRARIES (UMD/IIFE builds — load before app modules)
@@ -43,8 +43,8 @@
   <!-- pdf-lib v1.17.1 — Searchable PDF generation -->
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-  <!-- docx v9.7.1 — DOCX generation (UMD build) -->
-  <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs"></script>
+  <!-- docx v9.7.1 — DOCX generation (UMD build with jsDelivr v8.5.0 fallback) -->
+  <script src="https://unpkg.com/docx@9.7.1/dist/index.umd.cjs" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js'"></script>
 
   <!-- FileSaver.js v2.0.5 — Blob download trigger -->
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
@@ -963,6 +963,10 @@
             <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
             <span>Fit</span>
           </button>
+          <button id="btn-toggle-bbox" class="toolbar-pill-btn active" title="Toggle Bounding Boxes (Clean / Words / Off)">
+            <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            <span id="bbox-toggle-label">Boxes: Clean</span>
+          </button>
 
           <!-- Zoom Capsule (Zoom Out, % Level, Zoom In) -->
           <div class="zoom-capsule">
@@ -1195,31 +1199,31 @@
        ============================================================ -->
 
   <!-- Core data layer -->
-  <script src="js/canonical-doc.js?v=25.0"></script>
-  <script src="js/db.js?v=25.0"></script>
-  <script src="js/samples.js?v=25.0"></script>
+  <script src="js/canonical-doc.js?v=26.0"></script>
+  <script src="js/db.js?v=26.0"></script>
+  <script src="js/samples.js?v=26.0"></script>
 
   <!-- Pipeline agents (no deps on each other) -->
-  <script src="js/agents/image-filters.js?v=25.0"></script>
-  <script src="js/agents/layout-agent.js?v=25.0"></script>
-  <script src="js/agents/script-id-agent.js?v=25.0"></script>
-  <script src="js/agents/cross-validation-agent.js?v=25.0"></script>
-  <script src="js/agents/correction-agent.js?v=25.0"></script>
-  <script src="js/agents/qa-agent.js?v=25.0"></script>
+  <script src="js/agents/image-filters.js?v=26.0"></script>
+  <script src="js/agents/layout-agent.js?v=26.0"></script>
+  <script src="js/agents/script-id-agent.js?v=26.0"></script>
+  <script src="js/agents/cross-validation-agent.js?v=26.0"></script>
+  <script src="js/agents/correction-agent.js?v=26.0"></script>
+  <script src="js/agents/qa-agent.js?v=26.0"></script>
 
   <!-- Services -->
-  <script src="js/gemini-service.js?v=25.0"></script>
+  <script src="js/gemini-service.js?v=26.0"></script>
 
   <!-- Exporters -->
-  <script src="js/exporters/export-searchable-pdf.js?v=25.0"></script>
-  <script src="js/exporters/export-docx.js?v=25.0"></script>
-  <script src="js/exporters/export-txt.js?v=25.0"></script>
-  <script src="js/exporters/export-json.js?v=25.0"></script>
+  <script src="js/exporters/export-searchable-pdf.js?v=26.0"></script>
+  <script src="js/exporters/export-docx.js?v=26.0"></script>
+  <script src="js/exporters/export-txt.js?v=26.0"></script>
+  <script src="js/exporters/export-json.js?v=26.0"></script>
 
   <!-- Infrastructure (depends on agents + data layer) -->
-  <script src="js/preflight.js?v=25.0"></script>
-  <script src="js/page-streamer.js?v=25.0"></script>
-  <script src="js/coordinator.js?v=25.0"></script>
+  <script src="js/preflight.js?v=26.0"></script>
+  <script src="js/page-streamer.js?v=26.0"></script>
+  <script src="js/coordinator.js?v=26.0"></script>
 
   <!-- ============================================================
        TEST SUITE MODAL
@@ -1249,15 +1253,15 @@
   </div>
 
   <!-- UI Components -->
-  <script src="js/components/JobProgress.js?v=25.0"></script>
-  <script src="js/components/ReviewStudio.js?v=25.0"></script>
-  <script src="js/components/UserGuideModal.js?v=25.0"></script>
+  <script src="js/components/JobProgress.js?v=26.0"></script>
+  <script src="js/components/ReviewStudio.js?v=26.0"></script>
+  <script src="js/components/UserGuideModal.js?v=26.0"></script>
 
   <!-- Automated Test Suite -->
-  <script src="tests/test-suite.js?v=25.0"></script>
+  <script src="tests/test-suite.js?v=26.0"></script>
 
   <!-- Main application controller (must load last) -->
-  <script type="module" src="js/app.js?v=25.0"></script>
+  <script type="module" src="js/app.js?v=26.0"></script>
 
   <!-- ============================================================
        UI WIRING (Export Dropdown & Test Modal)

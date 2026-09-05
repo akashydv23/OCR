@@ -22,11 +22,13 @@ window.OCRStudio.PageStreamer = class PageStreamer {
    * @param {File} file - The PDF or image file to stream
    * @param {string} sessionId - Session ID for IndexedDB storage
    * @param {number} [dpi=200] - Render DPI for PDF rasterization
+   * @param {number} [concurrency=2] - Number of pages to process in parallel
    */
-  constructor(file, sessionId, dpi = 200) {
+  constructor(file, sessionId, dpi = 200, concurrency = 2) {
     this.file = file;
     this.sessionId = sessionId;
     this.dpi = dpi;
+    this.concurrency = Math.max(1, concurrency || 2);
     this.totalPages = 0;
     this.currentPage = 0;
 
@@ -146,7 +148,9 @@ window.OCRStudio.PageStreamer = class PageStreamer {
     this._pdfDoc = await loadingTask.promise;
 
     this.totalPages = this._pdfDoc.numPages;
-    console.log(`[PageStreamer] PDF loaded: ${this.totalPages} pages`);
+    console.log(`[PageStreamer] PDF loaded: ${this.totalPages} pages (Concurrency: ${this.concurrency})`);
+
+    const activeTasks = new Set();
 
     for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
       if (this._cancelled) break;
@@ -169,11 +173,30 @@ window.OCRStudio.PageStreamer = class PageStreamer {
         // Write to IndexedDB immediately
         await window.OCRStudio.DB.savePageBlob(this.sessionId, pageNum, blob);
 
-        // Fire callbacks — await onPageReady so pipeline finishes OCR before streaming next page
-        if (typeof this.onPageReady === 'function') {
-          await this.onPageReady(pageNum, width, height, blob);
+        // Throttle concurrency: if we have reached max concurrency, wait for at least one to complete
+        while (activeTasks.size >= this.concurrency && !this._cancelled) {
+          await Promise.race(activeTasks);
         }
-        this.onProgress?.(pageNum, this.totalPages);
+
+        if (this._cancelled) break;
+
+        // Dispatch page processing task
+        if (typeof this.onPageReady === 'function') {
+          let taskPromise = null;
+          taskPromise = Promise.resolve(this.onPageReady(pageNum, width, height, blob))
+            .catch((err) => {
+              console.error(`[PageStreamer] Error processing page ${pageNum}:`, err);
+              this.onError?.(err, pageNum);
+            })
+            .finally(() => {
+              activeTasks.delete(taskPromise);
+              this.onProgress?.(pageNum, this.totalPages);
+            });
+
+          activeTasks.add(taskPromise);
+        } else {
+          this.onProgress?.(pageNum, this.totalPages);
+        }
 
       } catch (err) {
         console.error(`[PageStreamer] Error on page ${pageNum}:`, err);
@@ -181,6 +204,9 @@ window.OCRStudio.PageStreamer = class PageStreamer {
         // Continue to next page — don't abort the whole job
       }
     }
+
+    // Await any remaining parallel tasks
+    await Promise.all(Array.from(activeTasks));
 
     if (this._pdfDoc) {
       try {
@@ -242,6 +268,9 @@ window.OCRStudio.PageStreamer = class PageStreamer {
 
   async _streamImages(files) {
     this.totalPages = files.length;
+    console.log(`[PageStreamer] Images loaded: ${this.totalPages} pages (Concurrency: ${this.concurrency})`);
+
+    const activeTasks = new Set();
 
     for (let i = 0; i < files.length; i++) {
       if (this._cancelled) break;
@@ -256,15 +285,38 @@ window.OCRStudio.PageStreamer = class PageStreamer {
       try {
         const { blob, width, height } = await this._loadImageAsJPEG(files[i]);
         await window.OCRStudio.DB.savePageBlob(this.sessionId, pageNum, blob);
-        if (typeof this.onPageReady === 'function') {
-          await this.onPageReady(pageNum, width, height, blob);
+
+        // Throttle concurrency
+        while (activeTasks.size >= this.concurrency && !this._cancelled) {
+          await Promise.race(activeTasks);
         }
-        this.onProgress?.(pageNum, this.totalPages);
+
+        if (this._cancelled) break;
+
+        if (typeof this.onPageReady === 'function') {
+          let taskPromise = null;
+          taskPromise = Promise.resolve(this.onPageReady(pageNum, width, height, blob))
+            .catch((err) => {
+              console.error(`[PageStreamer] Error processing image ${files[i].name}:`, err);
+              this.onError?.(err, pageNum);
+            })
+            .finally(() => {
+              activeTasks.delete(taskPromise);
+              this.onProgress?.(pageNum, this.totalPages);
+            });
+
+          activeTasks.add(taskPromise);
+        } else {
+          this.onProgress?.(pageNum, this.totalPages);
+        }
       } catch (err) {
         console.error(`[PageStreamer] Error loading image ${files[i].name}:`, err);
         this.onError?.(err, pageNum);
       }
     }
+
+    // Await any remaining parallel image tasks
+    await Promise.all(Array.from(activeTasks));
 
     if (!this._cancelled) {
       this.onComplete?.();

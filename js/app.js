@@ -500,9 +500,14 @@ window.OCRStudio = window.OCRStudio || {};
       exportPartial(pagesProcessed);
     });
 
-    // Initialize streamer and coordinator
-    state.streamer = new window.OCRStudio.PageStreamer(file, sessionId, 200);
-    state.coordinator = new window.OCRStudio.PipelineCoordinator(language, sessionId);
+    const hasGemini = Boolean(window.OCRStudio.GeminiService && window.OCRStudio.GeminiService.getApiKey());
+    const concurrency = hasGemini ? 3 : 2;
+    const activePagesSet = new Set();
+    let completedPagesCount = 0;
+
+    // Initialize streamer and coordinator with parallel concurrency
+    state.streamer = new window.OCRStudio.PageStreamer(file, sessionId, 200, concurrency);
+    state.coordinator = new window.OCRStudio.PipelineCoordinator(language, sessionId, concurrency);
 
     // Wire coordinator stage completions to ReviewStudio live UI
     state.coordinator.onStageComplete = (pageNum, stageName, result) => {
@@ -512,7 +517,11 @@ window.OCRStudio = window.OCRStudio || {};
       if (stageName === 'ocr' && result && result.wordCount) {
         const activeModel = window.OCRStudio.GeminiService?.getModel() || 'gemini-3.6-flash';
         const engineLabel = result.engine === 'gemini_vision' ? ` (⚡ ${activeModel})` : '';
-        window.OCRStudio.JobProgress.setPageProcessing?.(pageNum, `${result.wordCount} words recognized${engineLabel}`);
+        const parallelPages = Array.from(activePagesSet).sort((a, b) => a - b).join(', ');
+        window.OCRStudio.JobProgress.setPageProcessing?.(
+          pageNum,
+          `P.${pageNum} ${result.wordCount}w | Active: [${parallelPages}]${engineLabel}`
+        );
       }
     };
 
@@ -522,6 +531,7 @@ window.OCRStudio = window.OCRStudio || {};
 
     // Wire streamer callbacks
     state.streamer.onPageReady = async (pageNum, width, height, blob) => {
+      activePagesSet.add(pageNum);
       try {
         // If viewing this page (or page 1), display scan with laser beam immediately!
         if (state.currentPageNum === pageNum || pageNum === 1) {
@@ -530,20 +540,24 @@ window.OCRStudio = window.OCRStudio || {};
           window.OCRStudio.ReviewStudio.showProcessingScan(pageNum, blob, state.totalPages);
         }
 
-        const hasGemini = Boolean(window.OCRStudio.GeminiService && window.OCRStudio.GeminiService.getApiKey());
         const activeModel = window.OCRStudio.GeminiService?.getModel() || 'gemini-3.6-flash';
-        const progressMsg = hasGemini ? `⚡ Fast AI Processing (${activeModel})...` : 'Analyzing Indic text on-device...';
+        const parallelList = Array.from(activePagesSet).sort((a, b) => a - b).join(' & ');
+        const progressMsg = hasGemini
+          ? `⚡ AI Scanning P.${parallelList} (${activeModel})...`
+          : `⚡ Parallel Scanning P.${parallelList}...`;
         window.OCRStudio.JobProgress.setPageProcessing(pageNum, progressMsg);
 
         const canonicalPage = await state.coordinator.processPage(pageNum, width, height, 200);
         window.OCRStudio.CanonicalDoc.addPageToDoc(doc, canonicalPage);
 
+        completedPagesCount++;
+
         // Update DB with latest doc state
         await window.OCRStudio.DB.saveDoc(sessionId, doc);
-        await window.OCRStudio.DB.updateSessionStatus(sessionId, 'processing', pageNum);
+        await window.OCRStudio.DB.updateSessionStatus(sessionId, 'processing', completedPagesCount);
 
         // Update progress widget
-        window.OCRStudio.JobProgress.update(pageNum);
+        window.OCRStudio.JobProgress.update(completedPagesCount);
 
         // Load the complete page in ReviewStudio if active
         if (state.currentPageNum === pageNum || pageNum === 1) {
@@ -554,6 +568,8 @@ window.OCRStudio = window.OCRStudio || {};
       } catch (err) {
         console.error(`[App] Error processing page ${pageNum}:`, err);
         showToast(`Page ${pageNum} error: ${err.message}`, 'error', 'alert-triangle');
+      } finally {
+        activePagesSet.delete(pageNum);
       }
     };
 

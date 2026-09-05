@@ -1240,21 +1240,102 @@ kbd {
 
 .block-order-label { font-size: 10px; color: var(--text-muted); }
 
-/* ── 12. BBox SVG Rects ───────────────────────────────────── */
+/* ── 12. BBox SVG Elements & Clean Presentation ───────────── */
+#btn-toggle-bbox {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  gap: 5px;
+}
+#btn-toggle-bbox.active {
+  background: rgba(79, 142, 247, 0.15);
+  border-color: rgba(79, 142, 247, 0.35);
+  color: var(--accent);
+}
+
+/* Block container rect in Clean mode */
+.bbox-block-rect {
+  fill: rgba(79, 142, 247, 0.02);
+  stroke: rgba(79, 142, 247, 0.35);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  transition: all 0.2s ease;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.bbox-block-group:hover .bbox-block-rect,
+.bbox-block-group.selected-block .bbox-block-rect {
+  fill: rgba(79, 142, 247, 0.08);
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: none;
+}
+
+/* Block order badge */
+.bbox-block-badge {
+  fill: #161a26;
+  stroke: rgba(79, 142, 247, 0.45);
+  stroke-width: 0.75px;
+  pointer-events: none;
+}
+
+.bbox-block-group:hover .bbox-block-badge,
+.bbox-block-group.selected-block .bbox-block-badge {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.bbox-block-badge-text {
+  fill: #93b4ff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.bbox-block-group:hover .bbox-block-badge-text,
+.bbox-block-group.selected-block .bbox-block-badge-text {
+  fill: #ffffff;
+}
+
+/* Clean Mode: Word hitboxes (invisible until hovered) */
+.bbox-word-hitbox {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1px;
+  pointer-events: all;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bbox-word-hitbox:hover {
+  fill: rgba(0, 229, 255, 0.20);
+  stroke: #00e5ff;
+  stroke-width: 1.2px;
+}
+
+.bbox-word-hitbox.bbox-highlighted {
+  fill: rgba(255, 171, 0, 0.32);
+  stroke: #ffab00;
+  stroke-width: 2px;
+}
+
+/* Detailed Words Mode: Soft hairline styling (no dense mesh) */
 .bbox-rect {
-  stroke-width:   1.5px;
-  fill-opacity:   0.15;
+  stroke-width:   0.85px;
+  fill-opacity:   0.05;
   rx:             2;
   cursor:         pointer;
   transition:     fill-opacity 0.15s, stroke-opacity 0.15s;
   pointer-events: all;
 }
 
-.bbox-rect:hover           { fill-opacity: 0.35; }
-.bbox-rect.conf-high       { stroke: var(--success); fill: var(--success); }
-.bbox-rect.conf-mid        { stroke: var(--warning); fill: var(--warning); }
-.bbox-rect.conf-low        { stroke: var(--danger);  fill: var(--danger);  }
-.bbox-rect.bbox-highlighted { fill-opacity: 0.45; stroke-width: 2.5px; }
+.bbox-rect:hover           { fill-opacity: 0.25; stroke-width: 1.3px; }
+.bbox-rect.conf-high       { stroke: rgba(76, 175, 80, 0.65); fill: rgba(76, 175, 80, 0.08); }
+.bbox-rect.conf-mid        { stroke: rgba(255, 165, 0, 0.65); fill: rgba(255, 165, 0, 0.08); }
+.bbox-rect.conf-low        { stroke: rgba(220, 50, 47, 0.65); fill: rgba(220, 50, 47, 0.08); }
+.bbox-rect.bbox-highlighted { fill-opacity: 0.45; stroke-width: 2px; stroke: #ffab00; fill: #ffab00; }
 
 /* ── 13. Diff Drawer ──────────────────────────────────────── */
 #diff-drawer {
