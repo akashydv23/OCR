@@ -31,7 +31,7 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=21.0">
+  <link rel="stylesheet" href="css/styles.css?v=22.0">
 
   <!-- ============================================================
        CDN LIBRARIES (UMD/IIFE builds — load before app modules)
@@ -323,10 +323,56 @@
     .lp-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
     .lp-fade.lp-visible { opacity: 1; transform: translateY(0); }
 
+    /* Landing Footer */
+    .lp-footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 1060px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .lp-footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+    }
+    .lp-footer-brand svg {
+      color: var(--accent);
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .lp-footer-creator {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lp-author-name {
+      color: var(--text-primary);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .lp-footer-copy {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .lp-engines { grid-template-columns: 1fr; }
       .lp-privacy { grid-template-columns: 1fr; padding: 30px 20px; gap: 26px; }
+      .lp-footer { flex-direction: column; align-items: center; text-align: center; gap: 12px; }
     }
     @media (max-width: 480px) {
       .lp-actions { flex-direction: column; width: 100%; }
@@ -565,6 +611,18 @@
         </div>
       </div>
 
+      <!-- Landing Footer -->
+      <footer class="lp-footer">
+        <div class="lp-footer-brand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          IndicOCR Studio v2
+        </div>
+        <div class="lp-footer-creator">
+          Crafted with <span style="color:#e05151;">❤️</span> by <span class="lp-author-name">Akash Yadav</span>
+        </div>
+        <div class="lp-footer-copy">MIT License &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; Privacy First</div>
+      </footer>
+
     </section><!-- /#landing-page -->
 
     <!-- ── Upload Zone ────────────────────────────────────────────── -->
@@ -591,6 +649,11 @@
             <span>13 Indian scripts — Hindi, Tamil, Telugu, Bengali &amp; more</span>
           </div>
         </div>
+      </div>
+
+      <!-- App Footer Credit -->
+      <div class="app-footer-credit">
+        Crafted with <span style="color:#e05151;">❤️</span> by <span class="author-name">Akash Yadav</span> &nbsp;·&nbsp; IndicOCR Studio v2
       </div>
 
       <!-- Pre-flight Panel (shown after file selection) -->
@@ -897,31 +960,31 @@
        ============================================================ -->
 
   <!-- Core data layer -->
-  <script src="js/canonical-doc.js?v=21.0"></script>
-  <script src="js/db.js?v=21.0"></script>
-  <script src="js/samples.js?v=21.0"></script>
+  <script src="js/canonical-doc.js?v=22.0"></script>
+  <script src="js/db.js?v=22.0"></script>
+  <script src="js/samples.js?v=22.0"></script>
 
   <!-- Pipeline agents (no deps on each other) -->
-  <script src="js/agents/image-filters.js?v=21.0"></script>
-  <script src="js/agents/layout-agent.js?v=21.0"></script>
-  <script src="js/agents/script-id-agent.js?v=21.0"></script>
-  <script src="js/agents/cross-validation-agent.js?v=21.0"></script>
-  <script src="js/agents/correction-agent.js?v=21.0"></script>
-  <script src="js/agents/qa-agent.js?v=21.0"></script>
+  <script src="js/agents/image-filters.js?v=22.0"></script>
+  <script src="js/agents/layout-agent.js?v=22.0"></script>
+  <script src="js/agents/script-id-agent.js?v=22.0"></script>
+  <script src="js/agents/cross-validation-agent.js?v=22.0"></script>
+  <script src="js/agents/correction-agent.js?v=22.0"></script>
+  <script src="js/agents/qa-agent.js?v=22.0"></script>
 
   <!-- Services -->
-  <script src="js/gemini-service.js?v=21.0"></script>
+  <script src="js/gemini-service.js?v=22.0"></script>
 
   <!-- Exporters -->
-  <script src="js/exporters/export-searchable-pdf.js?v=21.0"></script>
-  <script src="js/exporters/export-docx.js?v=21.0"></script>
-  <script src="js/exporters/export-txt.js?v=21.0"></script>
-  <script src="js/exporters/export-json.js?v=21.0"></script>
+  <script src="js/exporters/export-searchable-pdf.js?v=22.0"></script>
+  <script src="js/exporters/export-docx.js?v=22.0"></script>
+  <script src="js/exporters/export-txt.js?v=22.0"></script>
+  <script src="js/exporters/export-json.js?v=22.0"></script>
 
   <!-- Infrastructure (depends on agents + data layer) -->
-  <script src="js/preflight.js?v=21.0"></script>
-  <script src="js/page-streamer.js?v=21.0"></script>
-  <script src="js/coordinator.js?v=21.0"></script>
+  <script src="js/preflight.js?v=22.0"></script>
+  <script src="js/page-streamer.js?v=22.0"></script>
+  <script src="js/coordinator.js?v=22.0"></script>
 
   <!-- ============================================================
        TEST SUITE MODAL
@@ -951,15 +1014,15 @@
   </div>
 
   <!-- UI Components -->
-  <script src="js/components/JobProgress.js?v=21.0"></script>
-  <script src="js/components/ReviewStudio.js?v=21.0"></script>
-  <script src="js/components/UserGuideModal.js?v=21.0"></script>
+  <script src="js/components/JobProgress.js?v=22.0"></script>
+  <script src="js/components/ReviewStudio.js?v=22.0"></script>
+  <script src="js/components/UserGuideModal.js?v=22.0"></script>
 
   <!-- Automated Test Suite -->
-  <script src="tests/test-suite.js?v=21.0"></script>
+  <script src="tests/test-suite.js?v=22.0"></script>
 
   <!-- Main application controller (must load last) -->
-  <script type="module" src="js/app.js?v=21.0"></script>
+  <script type="module" src="js/app.js?v=22.0"></script>
 
   <!-- ============================================================
        UI WIRING (Export Dropdown & Test Modal)

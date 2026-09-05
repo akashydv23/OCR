@@ -114,11 +114,14 @@ window.OCRStudio.UserGuideModal = (function () {
             '<div class="guide-tip">' + ico('hard-drive') + '<strong>Automatic Session Resume:</strong> If you accidentally refresh or close the tab, your processed pages are safely persisted.</div>' +
           '</div>' +
         '</div>' +
-        '<div style="margin-top: 24px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 16px;">' +
+        '<div style="margin-top: 24px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 16px; flex-wrap: wrap; gap: 12px;">' +
           '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-secondary); font-size: 13px;">' +
             '<input type="checkbox" id="guide-dont-show">' +
             'Don\'t show this guide on startup' +
           '</label>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' +
+            'Crafted with <span style="color:#e05151;">❤️</span> by <strong style="color:var(--text-secondary);">Akash Yadav</strong>' +
+          '</div>' +
           '<button id="btn-guide-close-bottom" class="btn-primary">Got it!</button>' +
         '</div>' +
       '</div>';
