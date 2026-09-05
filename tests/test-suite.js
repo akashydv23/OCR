@@ -570,6 +570,48 @@ window.OCRStudio.TestSuite = (() => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // GROUP 12: Export DOCX (1 test)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  test('Export DOCX generates valid blob without errors', 'Export DOCX', async () => {
+    const doc = makeSampleDoc();
+    let capturedBlob = null;
+    let capturedFilename = null;
+    const origSaveAs = window.saveAs;
+    window.saveAs = (blob, filename) => {
+      capturedBlob = blob;
+      capturedFilename = filename;
+    };
+    await window.OCRStudio.ExportDOCX.export(doc, null);
+    window.saveAs = origSaveAs;
+
+    assert(capturedBlob !== null, 'saveAs must be called with a DOCX blob');
+    assert(capturedBlob.size > 0, 'DOCX blob must not be empty');
+    assert(capturedFilename && capturedFilename.endsWith('.docx'), 'Filename must end with .docx');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GROUP 13: Export Searchable PDF (1 test)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  test('Export Searchable PDF generates valid PDF with invisible text layer', 'Export Searchable PDF', async () => {
+    const doc = makeSampleDoc();
+    let capturedBlob = null;
+    let capturedFilename = null;
+    const origSaveAs = window.saveAs;
+    window.saveAs = (blob, filename) => {
+      capturedBlob = blob;
+      capturedFilename = filename;
+    };
+    await window.OCRStudio.ExportSearchablePDF.export(doc, null);
+    window.saveAs = origSaveAs;
+
+    assert(capturedBlob !== null, 'saveAs must be called with a PDF blob');
+    assert(capturedBlob.size > 0, 'PDF blob must not be empty');
+    assert(capturedFilename && capturedFilename.endsWith('_searchable.pdf'), 'Filename must end with _searchable.pdf');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // DOM RENDERER
   // ═══════════════════════════════════════════════════════════════════════════
 
